@@ -6,9 +6,6 @@ import { useAuth } from '@/lib/hooks/useAuth';
 const navItems = [
   { href: '/about', label: 'About Riley' },
   { href: '/youtube', label: 'YouTube Content' },
-  { href: '/tiktok', label: 'TikTok Presence' },
-  { href: '/vibecode', label: 'VibeCode App' },
-  { href: '/tutorials', label: 'AI Tutorials' },
   { href: '/contact', label: 'Connect' },
 ];
 
