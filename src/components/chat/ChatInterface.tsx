@@ -1,175 +1,212 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { ChatMessage } from '@/types';
+import { ChatMessage as ChatMessageType } from '@/types';
+import ChatMessage from './ChatMessage';
+import ChatInput from './ChatInput';
+
+const STORAGE_KEY = 'riley-chat-messages';
 
 export default function ChatInterface() {
   const { user } = useAuth();
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      role: 'assistant',
-      content: "Hey there! I'm Riley Brown, and I'm excited to chat with you about AI! Whether you're curious about vibe coding, want to know about building apps with AI, or just want to explore what's possible with these amazing tools - I'm here to help. What's on your mind?",
-      timestamp: Date.now()
-    }
-  ]);
-  const [input, setInput] = useState('');
+  const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Load messages from localStorage on mount
+  useEffect(() => {
+    const savedMessages = localStorage.getItem(STORAGE_KEY);
+    if (savedMessages) {
+      try {
+        const parsed = JSON.parse(savedMessages);
+        setMessages(parsed);
+      } catch (err) {
+        console.error('Error parsing saved messages:', err);
+      }
+    }
+  }, []);
+
+  // Save messages to localStorage whenever messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    }
+  }, [messages]);
+
+  // Auto-scroll to bottom when new messages are added
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  useEffect(() => {
-    if (user) {
-      const savedMessages = localStorage.getItem(`chat_history_${user.uid}`);
-      if (savedMessages) {
-        const parsed = JSON.parse(savedMessages);
-        if (parsed.length > 1) { // Keep initial message
-          setMessages(parsed);
-        }
-      }
+  const handleSendMessage = async (content: string) => {
+    if (!user) {
+      setError('Please sign in to chat with Riley');
+      return;
     }
-  }, [user]);
 
-  useEffect(() => {
-    if (user && messages.length > 1) {
-      localStorage.setItem(`chat_history_${user.uid}`, JSON.stringify(messages));
-    }
-  }, [messages, user]);
+    setError(null);
+    setIsLoading(true);
 
-  const sendMessage = async () => {
-    if (!input.trim() || isLoading) return;
-
-    const userMessage: ChatMessage = {
+    // Add user message
+    const userMessage: ChatMessageType = {
       role: 'user',
-      content: input.trim(),
+      content,
       timestamp: Date.now()
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setIsLoading(true);
 
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
-          message: input.trim(),
-          userId: user?.uid
-        })
+          message: content,
+          userId: user.uid,
+        }),
       });
 
-      if (!response.ok) throw new Error('Failed to get response');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       const data = await response.json();
-      const assistantMessage: ChatMessage = {
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      // Add Riley's response
+      const rileyMessage: ChatMessageType = {
         role: 'assistant',
         content: data.reply,
         timestamp: Date.now()
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error('Chat error:', error);
-      const errorMessage: ChatMessage = {
-        role: 'assistant',
-        content: "Sorry, I'm having trouble responding right now. Please try again!",
-        timestamp: Date.now()
-      };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages(prev => [...prev, rileyMessage]);
+    } catch (err: any) {
+      console.error('Chat error:', err);
+      setError(err.message || 'Failed to get response from Riley. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
+  const clearChat = () => {
+    setMessages([]);
+    localStorage.removeItem(STORAGE_KEY);
+    setError(null);
   };
 
-  return (
-    <div className="max-w-3xl mx-auto h-[70vh] flex flex-col rounded-xl overflow-hidden border border-gray-200">
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4 bg-black/[0.01]">
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`flex gap-3 max-w-[80%] ${
-              message.role === 'user' ? 'self-end flex-row-reverse' : ''
-            }`}
-          >
-            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm flex-shrink-0">
-              {message.role === 'assistant' ? '🤖' : '👤'}
-            </div>
-            <div
-              className={`px-4 py-3 rounded-2xl shadow-sm border ${
-                message.role === 'user'
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white border-gray-200'
-              }`}
-            >
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                {message.content}
-              </p>
-            </div>
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center h-96 text-center">
+        <div className="mb-4">
+          <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-2xl mb-4">
+            R
           </div>
-        ))}
+        </div>
+        <h3 className="text-xl font-medium text-gray-900 mb-2">Chat with Riley Brown</h3>
+        <p className="text-gray-600 mb-6 max-w-md">
+          Sign in to start chatting with Riley about AI, coding, and building amazing apps with AI tools.
+        </p>
+        <div className="text-sm text-gray-500">
+          Please sign in above to continue
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto h-[80vh] flex flex-col bg-white rounded-lg shadow-sm border border-gray-200">
+      {/* Chat Header */}
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">
+            R
+          </div>
+          <div>
+            <h3 className="font-medium text-gray-900">Riley Brown</h3>
+            <p className="text-xs text-gray-500">#1 AI Educator • VibeCode Co-founder</p>
+          </div>
+        </div>
+        
+        {messages.length > 0 && (
+          <button
+            onClick={clearChat}
+            className="text-sm text-gray-500 hover:text-red-600 transition-colors duration-200"
+            title="Clear chat history"
+          >
+            Clear Chat
+          </button>
+        )}
+      </div>
+
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-1">
+        {messages.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-2xl mx-auto mb-4">
+              R
+            </div>
+            <h4 className="text-lg font-medium text-gray-900 mb-2">Hey there! 👋</h4>
+            <p className="text-gray-600 max-w-md mx-auto">
+              I'm Riley Brown, and I'm here to help you with AI, coding, and building amazing apps. 
+              Ask me anything about AI tools, VibeCode, or how to get started with AI development!
+            </p>
+          </div>
+        ) : (
+          <>
+            {messages.map((message, index) => (
+              <ChatMessage key={index} message={message} />
+            ))}
+          </>
+        )}
         
         {isLoading && (
-          <div className="flex gap-3 max-w-[80%]">
-            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm">
-              🤖
+          <div className="flex gap-3 mb-6">
+            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+              R
             </div>
-            <div className="bg-white border border-gray-200 px-4 py-3 rounded-2xl shadow-sm">
-              <div className="flex gap-1">
-                <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></div>
-                <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+            <div className="flex flex-col items-start">
+              <div className="text-xs text-gray-500 mb-1">Riley Brown</div>
+              <div className="bg-gray-100 border border-gray-200 px-4 py-3 rounded-2xl">
+                <div className="flex items-center gap-2">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  </div>
+                  <span className="text-sm text-gray-500">Riley is thinking...</span>
+                </div>
               </div>
             </div>
+          </div>
+        )}
+        
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">
+            <strong>Error:</strong> {error}
           </div>
         )}
         
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="border-t border-gray-200 p-4 bg-white">
-        <div className="flex gap-3 items-end">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Ask Riley about AI, vibe coding, or anything else..."
-            className="flex-1 px-4 py-3 border border-gray-300 rounded-3xl font-inherit text-sm resize-none min-h-[20px] max-h-[120px] leading-relaxed focus:outline-none focus:border-blue-600"
-            maxLength={500}
-            disabled={isLoading}
-            rows={1}
-            style={{ height: 'auto' }}
-          />
-          <button
-            onClick={sendMessage}
-            disabled={!input.trim() || isLoading}
-            className="bg-blue-600 text-white px-5 py-3 rounded-3xl font-medium text-sm transition-all duration-300 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex-shrink-0"
-          >
-            {isLoading ? 'Thinking...' : 'Send'}
-          </button>
-        </div>
-        <div className="mt-2 text-center">
-          <small className="text-gray-500 text-xs">
-            Chat powered by AI • Be respectful and constructive
-          </small>
-        </div>
-      </div>
+      {/* Chat Input */}
+      <ChatInput 
+        onSendMessage={handleSendMessage}
+        disabled={isLoading}
+        placeholder="Ask Riley about AI, coding, or building apps..."
+      />
     </div>
   );
 }
