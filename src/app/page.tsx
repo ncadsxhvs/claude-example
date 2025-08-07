@@ -6,10 +6,11 @@ export default function Home() {
     <Layout>
       <div className="mb-12">
         <div className="text-center mb-12">
-          <p className="text-lg leading-relaxed text-gray-700 max-w-lg mx-auto">
-            The #1 AI educator with 8.7M likes and 616.8K followers on TikTok. 
-            Co-founder of VibeCode, making $125K/month teaching people how to use AI tools 
-            to better communicate with the world digitally.
+          <p className="text-lg leading-relaxed text-gray-700 max-w-2xl mx-auto">
+            Senior Product Manager & Data Engineering Manager with 5+ years of experience leading 
+            cross-functional teams in healthcare technology and AI-driven product development. 
+            Passionate about building data-driven solutions that drive measurable business outcomes 
+            and improve operational efficiency.
           </p>
         </div>
       </div>

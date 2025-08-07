@@ -13,55 +13,51 @@ export default function AboutPage() {
       
       <div className="max-w-2xl mx-auto">
         <h1 className="text-5xl font-light mb-10 text-gray-900 tracking-tight">
-          About Riley
+          About Dong
         </h1>
         
         <div className="prose prose-lg text-gray-700 space-y-6">
           <p>
-            Riley Brown is a pioneering AI educator and content creator who has transformed how people understand and interact with artificial intelligence. With a background in marketing and technology, Riley identified the massive potential of AI tools early on and has dedicated his career to making these powerful technologies accessible to everyone.
+            Dong Chen is a seasoned Senior Product Manager and Data Engineering Manager with over 5 years of experience leading cross-functional teams in healthcare technology and AI-driven product development. He brings a unique blend of technical expertise and business acumen to drive measurable outcomes through innovative data solutions.
           </p>
           
           <h3 className="text-2xl font-normal mt-10 mb-5 text-gray-800">
-            Journey to AI Education
+            Professional Journey
           </h3>
           <p>
-            Riley's journey began when he had early access to GPT-3 models and immediately recognized that ChatGPT would be "the most viral piece of technology" he'd ever seen. This foresight led him to become one of the first educators to focus exclusively on practical AI applications.
+            Currently at ThinkResearch since November 2019, Dong has led the design and delivery of an Internal AI Knowledge & Virtual Care Platform leveraging RAG architecture (LLM + vector database). This revolutionary platform has improved provider response time by 40% and significantly reduced onboarding effort for clinical teams.
           </p>
           
           <p>
-            His rapid rise to prominence is remarkable: going from zero followers to 201,000 followers in just 45 days, accumulating over 30 million views in that period. Today, he's known as the #1 AI educator on TikTok with 8.7M likes and 616.8K followers.
+            His career trajectory showcases diverse technical experience: from Software Developer at Intel, to Full Stack Engineer at Geotab, and Business Analyst at PingAn E-commerce. This broad foundation has equipped him with comprehensive understanding of both technical implementation and business strategy.
           </p>
           
           <h3 className="text-2xl font-normal mt-10 mb-5 text-gray-800">
-            Mission & Philosophy
+            Education & Expertise
           </h3>
           <p>
-            Riley's mission is "to educate people on how to use these AI tools that are either very cheap or free and use it to better communicate with the world digitally." He believes that AI should be accessible to everyone, not just the tech-savvy, and focuses on practical applications rather than theoretical concepts.
-          </p>
-          
-          <p>
-            His teaching philosophy centers around the concept of "Vibe Coding" - using AI to create applications without traditional coding knowledge. This approach has democratized app development and opened new possibilities for creators and entrepreneurs.
+            Dong holds an Honors Bachelor of Computer Science with Software Engineering Specialist from University of Toronto (2009-2016) and a Master of Management Analytics from Queen's University Smith School of Business (2022-2023). This combination of technical depth and business analytics expertise enables him to bridge the gap between complex technical solutions and business value.
           </p>
           
           <div className="bg-black/[0.02] rounded-xl p-8 my-10 text-center">
             <div className="grid grid-cols-3 gap-6">
               <div>
-                <div className="text-3xl font-normal text-gray-900 mb-1">$125K</div>
-                <div className="text-sm text-gray-600 uppercase tracking-wide">Monthly Revenue</div>
+                <div className="text-3xl font-normal text-gray-900 mb-1">70%</div>
+                <div className="text-sm text-gray-600 uppercase tracking-wide">Cost Reduction</div>
               </div>
               <div>
-                <div className="text-3xl font-normal text-gray-900 mb-1">8.7M</div>
-                <div className="text-sm text-gray-600 uppercase tracking-wide">TikTok Likes</div>
+                <div className="text-3xl font-normal text-gray-900 mb-1">40%</div>
+                <div className="text-sm text-gray-600 uppercase tracking-wide">Response Time Improvement</div>
               </div>
               <div>
-                <div className="text-3xl font-normal text-gray-900 mb-1">616.8K</div>
-                <div className="text-sm text-gray-600 uppercase tracking-wide">Followers</div>
+                <div className="text-3xl font-normal text-gray-900 mb-1">20%</div>
+                <div className="text-sm text-gray-600 uppercase tracking-wide">Revenue Increase</div>
               </div>
             </div>
           </div>
           
           <p>
-            Through his various platforms and the VibeCode app, Riley continues to push the boundaries of what's possible with AI, making complex technologies accessible to creators, entrepreneurs, and everyday users worldwide.
+            Dong's approach focuses on data-driven decision making, process optimization, and building AI-driven solutions that solve real-world business problems. He excels at leading cross-functional teams and translating complex technical concepts into actionable business strategies.
           </p>
         </div>
       </div>

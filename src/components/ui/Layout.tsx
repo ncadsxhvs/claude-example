@@ -23,10 +23,10 @@ export default function Layout({ children, showNavigation = true }: LayoutProps)
             <>
               <header className="mb-16 text-center">
                 <h1 className="text-6xl font-light tracking-tight mb-3 text-gray-900">
-                  Riley Brown
+                  Dong Chen
                 </h1>
                 <p className="text-lg text-gray-600 font-normal">
-                  AI Educator & Content Creator
+                  Senior Product Manager & Data Engineering Manager
                 </p>
               </header>
               

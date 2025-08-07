@@ -1,11 +1,11 @@
-# Riley Brown - Next.js Landing Page
+# Dong Chen - Next.js Landing Page
 
-A modern, minimalist landing page for Riley Brown, the #1 AI educator and content creator, built with Next.js, TypeScript, and Tailwind CSS. Features AI chat integration and community discussion system.
+A modern, minimalist landing page for Dong Chen, the #1 AI educator and content creator, built with Next.js, TypeScript, and Tailwind CSS. Features AI chat integration and community discussion system.
 
 ## Features
 
 - **🎨 Minimalist Design**: Clean, document-style layout with elegant typography
-- **🤖 AI Chat**: Protected chat interface with Riley Brown persona powered by OpenAI GPT-4
+- **🤖 AI Chat**: Protected chat interface with Dong Chen persona powered by OpenAI GPT-4
 - **💬 Community Comments**: Real-time commenting system with likes functionality
 - **🔐 Authentication**: Google sign-in integration via Firebase Auth
 - **⚡ Real-time Updates**: Live comment updates using Firestore

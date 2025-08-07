@@ -11,21 +11,21 @@ interface ChatMessageProps {
 export default function ChatMessage({ message }: ChatMessageProps) {
   const { user } = useAuth();
   const isUser = message.role === 'user';
-  const isRiley = message.role === 'assistant';
+  const isDong = message.role === 'assistant';
 
   return (
     <div className={`flex gap-3 mb-6 ${isUser ? 'justify-end' : 'justify-start'}`}>
-      {isRiley && (
+      {isDong && (
         <div className="flex-shrink-0">
           <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-            R
+            D
           </div>
         </div>
       )}
       
       <div className={`flex flex-col ${isUser ? 'items-end' : 'items-start'} max-w-[80%]`}>
         <div className={`text-xs text-gray-500 mb-1 ${isUser ? 'text-right' : 'text-left'}`}>
-          {isUser ? (user?.displayName || 'You') : 'Riley Brown'}
+          {isUser ? (user?.displayName || 'You') : 'Dong Chen'}
         </div>
         
         <div className={`px-4 py-3 rounded-2xl ${

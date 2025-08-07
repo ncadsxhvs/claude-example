@@ -14,7 +14,7 @@ export default function ChatPage() {
       
       <div className="max-w-5xl mx-auto pt-20">
         <h1 className="text-5xl font-light mb-10 text-gray-900 tracking-tight text-center">
-          Chat with Riley
+          Chat with Dong
         </h1>
         
         <ChatInterface />

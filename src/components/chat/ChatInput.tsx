@@ -11,7 +11,7 @@ interface ChatInputProps {
 export default function ChatInput({ 
   onSendMessage, 
   disabled = false, 
-  placeholder = "Ask Riley about AI, coding, or building apps..." 
+  placeholder = "Ask Dong about product management, data engineering, or AI solutions..." 
 }: ChatInputProps) {
   const [message, setMessage] = useState('');
 

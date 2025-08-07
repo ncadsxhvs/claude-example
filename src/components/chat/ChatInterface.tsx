@@ -6,7 +6,7 @@ import { ChatMessage as ChatMessageType } from '@/types';
 import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 
-const STORAGE_KEY = 'riley-chat-messages';
+const STORAGE_KEY = 'dong-chat-messages';
 
 export default function ChatInterface() {
   const { user } = useAuth();
@@ -46,7 +46,7 @@ export default function ChatInterface() {
 
   const handleSendMessage = async (content: string) => {
     if (!user) {
-      setError('Please sign in to chat with Riley');
+      setError('Please sign in to chat with Dong');
       return;
     }
 
@@ -111,12 +111,12 @@ export default function ChatInterface() {
       <div className="flex flex-col items-center justify-center h-96 text-center">
         <div className="mb-4">
           <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-2xl mb-4">
-            R
+            D
           </div>
         </div>
-        <h3 className="text-xl font-medium text-gray-900 mb-2">Chat with Riley Brown</h3>
+        <h3 className="text-xl font-medium text-gray-900 mb-2">Chat with Dong Chen</h3>
         <p className="text-gray-600 mb-6 max-w-md">
-          Sign in to start chatting with Riley about AI, coding, and building amazing apps with AI tools.
+          Sign in to start chatting with Dong about product management, data engineering, and AI-driven solutions.
         </p>
         <div className="text-sm text-gray-500">
           Please sign in above to continue
@@ -131,11 +131,11 @@ export default function ChatInterface() {
       <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold">
-            R
+            D
           </div>
           <div>
-            <h3 className="font-medium text-gray-900">Riley Brown</h3>
-            <p className="text-xs text-gray-500">#1 AI Educator • VibeCode Co-founder</p>
+            <h3 className="font-medium text-gray-900">Dong Chen</h3>
+            <p className="text-xs text-gray-500">Senior Product Manager • Data Engineering Manager</p>
           </div>
         </div>
         
@@ -155,12 +155,12 @@ export default function ChatInterface() {
         {messages.length === 0 ? (
           <div className="text-center py-12">
             <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-2xl mx-auto mb-4">
-              R
+              D
             </div>
             <h4 className="text-lg font-medium text-gray-900 mb-2">Hey there! 👋</h4>
             <p className="text-gray-600 max-w-md mx-auto">
-              I'm Riley Brown, and I'm here to help you with AI, coding, and building amazing apps. 
-              Ask me anything about AI tools, VibeCode, or how to get started with AI development!
+              I'm Dong Chen, and I'm here to help you with product management, data engineering, and AI-driven solutions. 
+              Ask me anything about healthcare technology, data pipelines, or building scalable platforms!
             </p>
           </div>
         ) : (
@@ -174,10 +174,10 @@ export default function ChatInterface() {
         {isLoading && (
           <div className="flex gap-3 mb-6">
             <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-              R
+              D
             </div>
             <div className="flex flex-col items-start">
-              <div className="text-xs text-gray-500 mb-1">Riley Brown</div>
+              <div className="text-xs text-gray-500 mb-1">Dong Chen</div>
               <div className="bg-gray-100 border border-gray-200 px-4 py-3 rounded-2xl">
                 <div className="flex items-center gap-2">
                   <div className="flex gap-1">
@@ -185,7 +185,7 @@ export default function ChatInterface() {
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
                   </div>
-                  <span className="text-sm text-gray-500">Riley is thinking...</span>
+                  <span className="text-sm text-gray-500">Dong is thinking...</span>
                 </div>
               </div>
             </div>

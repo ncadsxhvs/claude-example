@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/hooks/useAuth';
 
 const navItems = [
-  { href: '/about', label: 'About Riley' },
-  { href: '/youtube', label: 'YouTube Content' },
+  { href: '/about', label: 'About Dong' },
+  { href: '/experience', label: 'Experience' },
   { href: '/contact', label: 'Connect' },
 ];
 
@@ -19,7 +19,7 @@ export default function Navigation() {
       ))}
       
       {user && (
-        <NavLink href="/chat" label="Chat with Riley" />
+        <NavLink href="/chat" label="Chat with Dong" />
       )}
     </nav>
   );

@@ -9,9 +9,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Riley Brown - AI Educator & Content Creator",
-  description: "The #1 AI educator with 8.7M likes and 616.8K followers on TikTok. Co-founder of VibeCode, teaching people how to use AI tools to better communicate digitally.",
-  keywords: ["AI", "education", "Riley Brown", "VibeCode", "artificial intelligence", "tutorials"],
+  title: "Dong Chen - Senior Product Manager & Data Engineering Manager",
+  description: "Senior Product Manager & Data Engineering Manager with 5+ years of experience in healthcare technology and AI-driven product development. Expert in building scalable data platforms and leading cross-functional teams.",
+  keywords: ["Product Management", "Data Engineering", "Dong Chen", "Healthcare Technology", "AI Solutions", "Data Platforms"],
 };
 
 export default function RootLayout({
