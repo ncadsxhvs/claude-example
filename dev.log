@@ -1,0 +1,14 @@
+
+> riley-brown-nextjs@0.1.0 dev
+> next dev --turbopack
+
+   ▲ Next.js 15.4.6 (Turbopack)
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.1.156:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 642ms
+ ○ Compiling / ...
+ ✓ Compiled / in 1429ms
+ GET / 200 in 1633ms

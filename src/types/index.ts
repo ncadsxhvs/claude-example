@@ -27,6 +27,6 @@ export interface ChatMessage {
 export interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signIn: () => Promise<void>;
+  signIn: () => Promise<any>;
   signOut: () => Promise<void>;
 }

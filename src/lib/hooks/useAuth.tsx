@@ -31,17 +31,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (error) {
+      const result = await signInWithPopup(auth, googleProvider);
+      console.log('Sign in successful:', result.user?.displayName);
+      return result;
+    } catch (error: any) {
       console.error('Sign in error:', error);
+      
+      // Handle specific Firebase auth errors
+      let errorMessage = 'Failed to sign in. Please try again.';
+      
+      if (error.code === 'auth/popup-closed-by-user') {
+        errorMessage = 'Sign in was cancelled.';
+      } else if (error.code === 'auth/popup-blocked') {
+        errorMessage = 'Popup was blocked. Please allow popups and try again.';
+      } else if (error.code === 'auth/unauthorized-domain') {
+        errorMessage = 'This domain is not authorized for Google Sign-In.';
+      } else if (error.code === 'auth/operation-not-allowed') {
+        errorMessage = 'Google Sign-In is not enabled.';
+      }
+      
+      throw new Error(errorMessage);
     }
   };
 
   const signOut = async () => {
     try {
       await firebaseSignOut(auth);
-    } catch (error) {
+      console.log('Sign out successful');
+    } catch (error: any) {
       console.error('Sign out error:', error);
+      throw new Error('Failed to sign out. Please try again.');
     }
   };
 
