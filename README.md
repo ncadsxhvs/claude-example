@@ -1,6 +1,6 @@
 # Dong Chen - Next.js Landing Page
 
-A modern, minimalist landing page for Dong Chen, the #1 AI educator and content creator, built with Next.js, TypeScript, and Tailwind CSS. Features AI chat integration and community discussion system.
+A modern, minimalist professional portfolio for Dong Chen, Senior Product Manager & Data Engineering Manager, built with Next.js, TypeScript, and Tailwind CSS. Features AI chat integration and community discussion system.
 
 ## Features
 

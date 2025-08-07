@@ -84,17 +84,17 @@ export default function ChatInterface() {
         throw new Error(data.error);
       }
 
-      // Add Riley's response
-      const rileyMessage: ChatMessageType = {
+      // Add Dong's response
+      const dongMessage: ChatMessageType = {
         role: 'assistant',
         content: data.reply,
         timestamp: Date.now()
       };
 
-      setMessages(prev => [...prev, rileyMessage]);
+      setMessages(prev => [...prev, dongMessage]);
     } catch (err: any) {
       console.error('Chat error:', err);
-      setError(err.message || 'Failed to get response from Riley. Please try again.');
+      setError(err.message || 'Failed to get response from Dong. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -205,7 +205,7 @@ export default function ChatInterface() {
       <ChatInput 
         onSendMessage={handleSendMessage}
         disabled={isLoading}
-        placeholder="Ask Riley about AI, coding, or building apps..."
+        placeholder="Ask Dong about product management, data engineering, or AI solutions..."
       />
     </div>
   );

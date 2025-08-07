@@ -100,7 +100,7 @@ export default function Comments() {
         <textarea
           value={newComment}
           onChange={(e) => setNewComment(e.target.value)}
-          placeholder="Share your thoughts about AI, Riley's content, or ask questions..."
+          placeholder="Share your thoughts about product management, data engineering, or ask questions..."
           className="p-4 border border-gray-300 rounded-lg font-inherit text-base resize-none min-h-[80px] leading-relaxed focus:outline-none focus:border-blue-600"
           maxLength={500}
           disabled={loading}
