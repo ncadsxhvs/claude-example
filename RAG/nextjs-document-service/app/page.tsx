@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import FileUpload from './components/FileUpload';
 import VectorDashboard from '../components/vectors/VectorDashboard';
+import ProcessingStatus from '../components/realtime/ProcessingStatus';
 import { ProcessingResult, DocumentChunk } from '@/lib/processor';
 
 export default function Home() {
@@ -26,6 +27,7 @@ export default function Home() {
     try {
       const formData = new FormData();
       formData.append('file', selectedFile);
+      formData.append('userId', 'demo-user'); // In production, get from auth context
       formData.append('chunkSize', '1000');
       formData.append('overlap', '200');
 
@@ -56,6 +58,15 @@ export default function Home() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
+      {/* Real-time Processing Status */}
+      <ProcessingStatus 
+        userId="demo-user" 
+        onProcessingComplete={(documentId) => {
+          console.log(`Document ${documentId} processing completed`);
+          // Optionally refresh data or show notification
+        }}
+      />
+
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
           Document Processing Service

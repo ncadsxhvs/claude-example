@@ -3,6 +3,7 @@ import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { createHash } from 'crypto';
 import { db } from '../../../lib/database';
 import { ragConfig } from '../../../lib/config';
+import { createDocumentProcessor } from '../../../lib/realtime';
 
 // Simple text extraction function for demonstration
 async function extractTextFromFile(file: File): Promise<string> {
@@ -83,10 +84,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Create a temporary document ID for real-time updates
+    const tempDocumentId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Initialize real-time processor
+    const processor = createDocumentProcessor(tempDocumentId, userId, file.name);
+    processor.queued();
+
     // Extract text content
+    processor.extractingText();
     const extractedText = await extractTextFromFile(file);
 
     if (!extractedText.trim()) {
+      processor.failed('File appears to be empty');
       return NextResponse.json(
         { error: 'File appears to be empty' },
         { status: 400 }
@@ -95,6 +105,7 @@ export async function POST(request: NextRequest) {
 
     // Generate content hash for duplicate detection
     const contentHash = generateContentHash(extractedText);
+    processor.extractingText(extractedText.length);
     
     // Check for duplicates
     const duplicateCheck = await checkForDuplicate(userId, file.name, file.size, contentHash);
@@ -161,6 +172,10 @@ export async function POST(request: NextRequest) {
     const documentResult = await db.query(createDocumentQuery, documentValues);
     const documentId = documentResult.rows[0].id;
 
+    // Update processor with real document ID
+    const realProcessor = createDocumentProcessor(documentId, userId, file.name);
+    realProcessor.chunking(extractedText.length);
+
     // Step 2: Chunk the text (configuration-driven)
     const textSplitter = new RecursiveCharacterTextSplitter({
       chunkSize: ragConfig.chunkSize,
@@ -180,6 +195,7 @@ export async function POST(request: NextRequest) {
     const textChunks = await textSplitter.splitText(extractedText);
 
     if (textChunks.length === 0) {
+      realProcessor.failed('No valid text chunks could be created');
       await db.query('UPDATE documents SET status = $1 WHERE id = $2', ['failed', documentId]);
       return NextResponse.json(
         { error: 'No valid text chunks could be created' },
@@ -187,8 +203,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    realProcessor.chunkingProgress(textChunks.length, textChunks.length);
+
     try {
       // Step 3: Insert chunks into database (without embeddings for now)
+      realProcessor.storingChunks(textChunks.length);
+      
       const insertChunksQuery = `
         INSERT INTO chunks (document_id, chunk_index, text, word_count, character_count, metadata)
         VALUES ($1, $2, $3, $4, $5, $6)
@@ -209,6 +229,11 @@ export async function POST(request: NextRequest) {
             needsEmbedding: true
           })
         ]);
+
+        // Update progress every 10 chunks or on last chunk
+        if (i % 10 === 0 || i === textChunks.length - 1) {
+          realProcessor.chunkingProgress(i + 1, textChunks.length);
+        }
       }
 
       // Step 4: Update document status to completed
@@ -216,6 +241,9 @@ export async function POST(request: NextRequest) {
         'UPDATE documents SET status = $1, chunks_count = $2, processed_at = NOW() WHERE id = $3',
         ['completed', textChunks.length, documentId]
       );
+
+      // Mark processing as completed
+      realProcessor.completed(textChunks.length, extractedText.length);
 
       // Step 5: Return success response (matching the expected format)
       return NextResponse.json({
@@ -240,7 +268,8 @@ export async function POST(request: NextRequest) {
     } catch (dbError: any) {
       console.error('Database insertion failed:', dbError);
       
-      // Update document status to failed
+      // Mark processing as failed and update database
+      realProcessor.failed(`Database error: ${dbError.message}`);
       await db.query('UPDATE documents SET status = $1 WHERE id = $2', ['failed', documentId]);
       
       return NextResponse.json(

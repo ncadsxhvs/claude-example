@@ -63,5 +63,13 @@ Thumbs.db
 # Coverage reports
 **/coverage/
 
-# pgvector build files
-pgvector/
+# Database backup files
+*.sql.backup
+*.dump
+
+# Local data files (keep structure, ignore content)
+data/*.txt
+data/*.pdf
+data/*.docx
+!data/*.md
+!data/README.md

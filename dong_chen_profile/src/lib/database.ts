@@ -109,6 +109,26 @@ export interface SearchResult {
   similarity_score: number;
 }
 
+export interface HybridSearchResult {
+  chunk_id: string;
+  document_id: string;
+  filename: string;
+  chunk_text: string;
+  chunk_index: number;
+  semantic_score: number;
+  keyword_score: number;
+  combined_score: number;
+}
+
+export interface KeywordSearchResult {
+  chunk_id: string;
+  document_id: string;
+  filename: string;
+  chunk_text: string;
+  chunk_index: number;
+  keyword_score: number;
+}
+
 // Database service functions
 export class DocumentService {
   // Create a new document record
@@ -228,6 +248,63 @@ export class ChunkService {
       similarityThreshold,
       maxResults
     ];
+    
+    const result = await db.query(query, values);
+    return result.rows;
+  }
+
+  // Hybrid search combining semantic and keyword search
+  static async searchHybridChunks(
+    queryEmbedding: number[],
+    queryText: string,
+    userId: string,
+    options: {
+      semanticWeight?: number;
+      keywordWeight?: number;
+      similarityThreshold?: number;
+      maxResults?: number;
+    } = {}
+  ): Promise<HybridSearchResult[]> {
+    const { 
+      semanticWeight = 0.7, 
+      keywordWeight = 0.3, 
+      similarityThreshold = 0.6, 
+      maxResults = 5 
+    } = options;
+    
+    const query = `
+      SELECT * FROM search_hybrid_chunks($1::vector, $2, $3, $4, $5, $6, $7)
+    `;
+    
+    const values = [
+      JSON.stringify(queryEmbedding),
+      queryText,
+      userId,
+      semanticWeight,
+      keywordWeight,
+      similarityThreshold,
+      maxResults
+    ];
+    
+    const result = await db.query(query, values);
+    return result.rows;
+  }
+
+  // Keyword-only search
+  static async searchKeywordChunks(
+    queryText: string,
+    userId: string,
+    options: {
+      maxResults?: number;
+    } = {}
+  ): Promise<KeywordSearchResult[]> {
+    const { maxResults = 5 } = options;
+    
+    const query = `
+      SELECT * FROM search_keyword_chunks($1, $2, $3)
+    `;
+    
+    const values = [queryText, userId, maxResults];
     
     const result = await db.query(query, values);
     return result.rows;

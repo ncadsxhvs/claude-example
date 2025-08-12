@@ -52,6 +52,9 @@ CREATE INDEX idx_chunks_chunk_index ON chunks(chunk_index);
 -- Vector similarity index (HNSW for fast approximate search)
 CREATE INDEX idx_chunks_embedding ON chunks USING hnsw (embedding vector_cosine_ops);
 
+-- Full-text search index for hybrid search
+CREATE INDEX idx_chunks_text_search ON chunks USING gin(to_tsvector('english', text));
+
 -- Composite indexes for common queries
 CREATE INDEX idx_chunks_document_user ON chunks(document_id) 
     INCLUDE (text, word_count, character_count);
@@ -86,6 +89,86 @@ BEGIN
         AND d.status = 'completed'
         AND (1 - (c.embedding <=> query_embedding)) >= similarity_threshold
     ORDER BY c.embedding <=> query_embedding
+    LIMIT max_results;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function for hybrid search (semantic + keyword)
+CREATE OR REPLACE FUNCTION search_hybrid_chunks(
+    query_embedding vector(1536),
+    query_text TEXT,
+    user_id_param VARCHAR(255),
+    semantic_weight FLOAT DEFAULT 0.7,
+    keyword_weight FLOAT DEFAULT 0.3,
+    similarity_threshold FLOAT DEFAULT 0.6,
+    max_results INTEGER DEFAULT 5
+)
+RETURNS TABLE (
+    chunk_id UUID,
+    document_id UUID,
+    filename VARCHAR(500),
+    chunk_text TEXT,
+    chunk_index INTEGER,
+    semantic_score FLOAT,
+    keyword_score FLOAT,
+    combined_score FLOAT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        c.id,
+        c.document_id,
+        d.filename,
+        c.text,
+        c.chunk_index,
+        (1 - (c.embedding <=> query_embedding)) as semantic_score,
+        COALESCE(ts_rank(to_tsvector('english', c.text), plainto_tsquery('english', query_text)), 0) as keyword_score,
+        (
+            semantic_weight * (1 - (c.embedding <=> query_embedding)) + 
+            keyword_weight * COALESCE(ts_rank(to_tsvector('english', c.text), plainto_tsquery('english', query_text)), 0)
+        ) as combined_score
+    FROM chunks c
+    JOIN documents d ON c.document_id = d.id
+    WHERE d.user_id = user_id_param
+        AND d.status = 'completed'
+        AND (
+            (1 - (c.embedding <=> query_embedding)) >= similarity_threshold
+            OR to_tsvector('english', c.text) @@ plainto_tsquery('english', query_text)
+        )
+    ORDER BY combined_score DESC
+    LIMIT max_results;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function for keyword-only search
+CREATE OR REPLACE FUNCTION search_keyword_chunks(
+    query_text TEXT,
+    user_id_param VARCHAR(255),
+    max_results INTEGER DEFAULT 5
+)
+RETURNS TABLE (
+    chunk_id UUID,
+    document_id UUID,
+    filename VARCHAR(500),
+    chunk_text TEXT,
+    chunk_index INTEGER,
+    keyword_score FLOAT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        c.id,
+        c.document_id,
+        d.filename,
+        c.text,
+        c.chunk_index,
+        ts_rank(to_tsvector('english', c.text), plainto_tsquery('english', query_text)) as keyword_score
+    FROM chunks c
+    JOIN documents d ON c.document_id = d.id
+    WHERE d.user_id = user_id_param
+        AND d.status = 'completed'
+        AND to_tsvector('english', c.text) @@ plainto_tsquery('english', query_text)
+    ORDER BY keyword_score DESC
     LIMIT max_results;
 END;
 $$ LANGUAGE plpgsql;

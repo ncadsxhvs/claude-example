@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ChunkService, SearchResult } from '@/lib/database';
+import { ChunkService, SearchResult, HybridSearchResult } from '@/lib/database';
 import { generateQueryEmbedding } from '@/lib/embeddings';
 import { openaiConfig, ragConfig } from '@/lib/config';
+import { defaultReranker, RerankedResult } from '@/lib/reranker';
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,7 +62,7 @@ Respond as Dong would - professional yet approachable, focused on practical busi
 When provided with context from uploaded documents, incorporate relevant information naturally into your response and mention which document you're referencing when appropriate.`;
 
     // Step 1: Generate embedding for the user's query
-    let searchResults: SearchResult[] = [];
+    let rerankedResults: RerankedResult[] = [];
     let citations: string[] = [];
     let enhancedMessage = message;
 
@@ -69,20 +70,33 @@ When provided with context from uploaded documents, incorporate relevant informa
       // Generate query embedding
       const queryEmbedding = await generateQueryEmbedding(message);
       
-      // Step 2: Perform semantic search in pgvector database
-      searchResults = await ChunkService.searchSimilarChunks(
+      // Step 2: Perform hybrid search (semantic + keyword) in pgvector database
+      const hybridResults = await ChunkService.searchHybridChunks(
         queryEmbedding,
+        message,
         userId,
         {
-          similarityThreshold: 0.7, // Cosine similarity threshold
-          maxResults: 5
+          semanticWeight: 0.7,    // 70% semantic similarity
+          keywordWeight: 0.3,     // 30% keyword matching
+          similarityThreshold: 0.6, // Lower threshold for hybrid search
+          maxResults: 8           // Get more results for reranking
         }
       );
+
+      // Step 3: Apply re-ranking based on relevance signals
+      if (hybridResults.length > 0) {
+        rerankedResults = defaultReranker.rerank(hybridResults, message);
+        
+        // Take top 5 after reranking
+        rerankedResults = rerankedResults.slice(0, 5);
+      }
       
-      // Step 3: Build context from search results
-      if (searchResults.length > 0) {
-        const context = searchResults
-          .map((result, index) => `[Document: ${result.filename}, Section ${result.chunk_index + 1}, Similarity: ${(result.similarity_score * 100).toFixed(1)}%]\n${result.chunk_text}`)
+      // Step 4: Build context from reranked results
+      if (rerankedResults.length > 0) {
+        const context = rerankedResults
+          .map((result, index) => 
+            `[Document: ${result.filename}, Section ${result.chunk_index + 1}, Relevance: ${(result.reranked_score * 100).toFixed(1)}% (Original: ${(result.original_combined_score * 100).toFixed(1)}%, Semantic: ${(result.semantic_score * 100).toFixed(1)}%, Keywords: ${(result.keyword_score * 100).toFixed(1)}%)]\n${result.chunk_text}`
+          )
           .join('\n\n---\n\n');
 
         enhancedMessage = `Context from uploaded documents:
@@ -94,13 +108,13 @@ Based on the above context from the user's uploaded documents, please answer the
 
 User question: ${message}`;
 
-        citations = searchResults.map((result) => 
-          `Based on your document "${result.filename}" (section ${result.chunk_index + 1}, ${(result.similarity_score * 100).toFixed(1)}% similarity)`
+        citations = rerankedResults.map((result) => 
+          `Based on your document "${result.filename}" (section ${result.chunk_index + 1}, relevance score: ${(result.reranked_score * 100).toFixed(1)}%)`
         );
       }
     } catch (embeddingError: any) {
-      console.error('Error performing semantic search:', embeddingError);
-      // Continue without RAG context if embedding fails
+      console.error('Error performing hybrid search with reranking:', embeddingError);
+      // Continue without RAG context if search fails
     }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -135,12 +149,16 @@ User question: ${message}`;
 
     return NextResponse.json({ 
       reply,
-      hasContext: searchResults.length > 0,
+      hasContext: rerankedResults.length > 0,
       citations,
-      searchResults: searchResults.map(r => ({
+      searchResults: rerankedResults.map(r => ({
         fileName: r.filename,
         chunkIndex: r.chunk_index,
-        similarity: r.similarity_score
+        semanticScore: r.semantic_score,
+        keywordScore: r.keyword_score,
+        combinedScore: r.original_combined_score,
+        rerankedScore: r.reranked_score,
+        rerankingFactors: r.reranking_factors
       }))
     });
   } catch (error) {
