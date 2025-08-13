@@ -7,6 +7,14 @@ interface DatabaseConfig {
   password: string;
 }
 
+interface OpenAIConfig {
+  apiKey: string;
+  embeddingModel: string;
+  chatModel: string;
+  embeddingDimensions: number;
+  maxBatchSize: number;
+}
+
 interface RAGConfig {
   chunkSize: number;
   chunkOverlap: number;
@@ -18,6 +26,7 @@ interface RAGConfig {
 
 interface AppConfig {
   database: DatabaseConfig;
+  openai: OpenAIConfig;
   rag: RAGConfig;
 }
 
@@ -38,6 +47,15 @@ export const databaseConfig: DatabaseConfig = {
   password: process.env.DB_PASSWORD || '',
 };
 
+// OpenAI configuration
+export const openaiConfig: OpenAIConfig = {
+  apiKey: validateEnvVar('OPENAI_API_KEY'),
+  embeddingModel: validateEnvVar('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-small'),
+  chatModel: validateEnvVar('OPENAI_CHAT_MODEL', 'gpt-4'),
+  embeddingDimensions: parseInt(validateEnvVar('OPENAI_EMBEDDING_DIMENSIONS', '1536')),
+  maxBatchSize: parseInt(validateEnvVar('OPENAI_MAX_BATCH_SIZE', '100')),
+};
+
 // RAG system configuration
 export const ragConfig: RAGConfig = {
   chunkSize: parseInt(validateEnvVar('RAG_CHUNK_SIZE', '1000')),
@@ -51,5 +69,6 @@ export const ragConfig: RAGConfig = {
 // Full app configuration
 export const config: AppConfig = {
   database: databaseConfig,
+  openai: openaiConfig,
   rag: ragConfig,
 };

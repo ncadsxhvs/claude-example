@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Simple chat API using OpenAI directly
+// TODO: In the future, this can call the RAG service at http://localhost:8003/api/search
+// to enhance responses with document context when needed
+
 export async function POST(request: NextRequest) {
   try {
     const { message, userId } = await request.json();
@@ -13,9 +17,9 @@ export async function POST(request: NextRequest) {
 
     const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-    if (!OPENAI_API_KEY) {
+    if (!OPENAI_API_KEY || OPENAI_API_KEY === 'your_openai_api_key_here') {
       return NextResponse.json(
-        { error: 'OpenAI API key not configured' },
+        { error: 'OpenAI API key not configured. Please set a valid OPENAI_API_KEY in .env.local file.' },
         { status: 500 }
       );
     }

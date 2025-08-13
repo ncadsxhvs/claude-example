@@ -1,5 +1,5 @@
 import Layout from '@/components/ui/Layout';
-import RAGChatInterface from '@/components/chat/RAGChatInterface';
+import ChatInterface from '@/components/chat/ChatInterface';
 import Link from 'next/link';
 
 export default function ChatPage() {
@@ -17,7 +17,7 @@ export default function ChatPage() {
           Chat with Dong
         </h1>
         
-        <RAGChatInterface />
+        <ChatInterface />
       </div>
     </Layout>
   );

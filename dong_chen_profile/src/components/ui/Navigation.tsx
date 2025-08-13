@@ -15,7 +15,7 @@ export default function Navigation() {
   return (
     <nav className="flex flex-col gap-6 items-center">
       {navItems.map((item) => (
-        <NavLink key={item.href} href={item.href} label={item.label} />
+        <NavLink key={item.href} href={item.href} label={item.label} external={item.external} />
       ))}
       
       {user && (
@@ -25,13 +25,13 @@ export default function Navigation() {
   );
 }
 
-function NavLink({ href, label }: { href: string; label: string }) {
-  return (
-    <Link
-      href={href}
-      className="group relative text-xl font-normal text-gray-800 transition-colors duration-300 hover:text-black"
-    >
-      <span className="relative z-10">{label}</span>
+function NavLink({ href, label, external }: { href: string; label: string; external?: boolean }) {
+  const linkContent = (
+    <>
+      <span className="relative z-10 flex items-center gap-1">
+        {label}
+        {external && <span className="text-blue-600">🔗</span>}
+      </span>
       <span 
         className="absolute bottom-0 left-0 w-full h-px bg-gray-800 transform scale-x-100 origin-left transition-transform duration-300 group-hover:scale-x-0 group-hover:origin-right"
       />
@@ -42,6 +42,28 @@ function NavLink({ href, label }: { href: string; label: string }) {
           animationTimingFunction: 'ease-in-out',
         }}
       />
+    </>
+  );
+
+  if (external) {
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group relative text-xl font-normal text-gray-800 transition-colors duration-300 hover:text-black"
+      >
+        {linkContent}
+      </a>
+    );
+  }
+
+  return (
+    <Link
+      href={href}
+      className="group relative text-xl font-normal text-gray-800 transition-colors duration-300 hover:text-black"
+    >
+      {linkContent}
     </Link>
   );
 }

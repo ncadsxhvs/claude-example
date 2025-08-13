@@ -5,12 +5,11 @@ A professional development workspace containing multiple projects for Dong Chen,
 ## 📁 Repository Structure
 
 ### `dong_chen_profile/` - Professional Landing Page
-A modern, minimalist professional portfolio built with Next.js, TypeScript, and Tailwind CSS. Features AI chat integration with RAG capabilities and community discussion system.
+A modern, minimalist professional portfolio built with Next.js, TypeScript, and Tailwind CSS. Clean and focused on the core functionality.
 
 **Features:**
 - 🎨 Minimalist Design with elegant typography
 - 🤖 AI Chat with Dong Chen persona powered by OpenAI GPT-4
-- 📄 RAG-enhanced chat using uploaded documents
 - 💬 Community Comments with real-time updates
 - 🔐 Firebase Authentication (Google sign-in)
 - 📱 Responsive design with Tailwind CSS
@@ -61,14 +60,13 @@ Sample documents and test files for RAG system development and testing.
 
 **Automated Setup (Recommended):**
 ```bash
-./setup.sh
+./setup-all.sh env && ./setup-all.sh install && ./setup-all.sh dev
 ```
 
-This will:
-- Install dependencies for both projects
-- Set up shared environment configuration
-- Create necessary symlinks
-- Verify database requirements
+Or individually:
+- `./setup-all.sh env` - Setup environment files
+- `./setup-all.sh install` - Install dependencies
+- `./setup-all.sh dev` - Start both development servers
 
 **Manual Setup:**
 1. **Environment Configuration:**
@@ -102,9 +100,10 @@ cd RAG/nextjs-document-service && npm run dev  # http://localhost:8003
 ## ⚙️ Configuration Management
 
 **Centralized Configuration:**
-- Single `.env.local` file in repository root
-- Shared across both projects via symlinks
-- All API keys, database credentials, and settings in one place
+- Master `.env.local.example` file in repository root
+- Each service has its own `.env.local` file (copied from template)
+- Separation of concerns: dong_chen_profile only includes what it needs
+- RAG service has full configuration for document processing
 
 **Environment Variables:**
 ```env
@@ -128,8 +127,9 @@ RAG_SIMILARITY_THRESHOLD=0.7
 
 ## 📈 Project Status
 
-- ✅ **dong_chen_profile**: Production ready with AI chat and RAG integration
+- ✅ **dong_chen_profile**: Clean, minimalist landing page with AI chat (no RAG dependencies)
 - ✅ **RAG Phase 3**: Hybrid search, re-ranking, and real-time processing complete
+- ✅ **Configuration**: Centralized config management with service separation
 - 📋 **RAG Phase 4**: Document intelligence and PDF extraction (next)
 
 ## 🎯 Current Focus
