@@ -1,0 +1,44 @@
+PATIENT LAB RESULTS - JOHN DOE
+Date: 2024-01-15
+Patient ID: P123456
+
+LABORATORY TEST RESULTS
+
+Test Name          | Result | Reference Range | Units  | Status
+-------------------|--------|-----------------|--------|--------
+Glucose            | 95     | 70-99           | mg/dL  | Normal
+Cholesterol Total  | 180    | <200            | mg/dL  | Normal  
+HDL Cholesterol    | 45     | >40             | mg/dL  | Normal
+LDL Cholesterol    | 120    | <100            | mg/dL  | High
+Triglycerides      | 150    | <150            | mg/dL  | Normal
+Hemoglobin A1C     | 5.8    | <6.0            | %      | Normal
+Creatinine         | 1.1    | 0.6-1.2         | mg/dL  | Normal
+BUN                | 18     | 7-20            | mg/dL  | Normal
+
+VITAL SIGNS
+
+Parameter          | Value  | Normal Range    | Status
+-------------------|--------|-----------------|--------
+Blood Pressure     | 118/76 | <120/80         | Normal
+Heart Rate         | 72     | 60-100 bpm      | Normal
+Temperature        | 98.6   | 97-99°F         | Normal
+Respiratory Rate   | 16     | 12-20/min       | Normal
+Weight             | 175    | 150-200 lbs     | Normal
+Height             | 70     | -               | inches
+
+MEDICATION LIST
+
+Medication         | Dosage | Frequency | Start Date
+-------------------|--------|-----------|------------
+Metformin          | 500mg  | 2x daily  | 2023-06-01
+Lisinopril         | 10mg   | 1x daily  | 2023-08-15
+Simvastatin        | 20mg   | 1x daily  | 2024-01-01
+
+CLINICAL NOTES:
+Patient shows excellent glucose control with current diabetes medication regimen.
+Blood pressure is well controlled on current ACE inhibitor.
+LDL cholesterol is slightly elevated - patient started on statin therapy.
+Recommend follow-up in 3 months to reassess lipid profile.
+
+PHYSICIAN: Dr. Sarah Johnson, MD
+REVIEWED: 2024-01-15 10:30 AM

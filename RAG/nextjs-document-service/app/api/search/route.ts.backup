@@ -1,0 +1,225 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { generateEmbedding } from '../../../lib/embeddings';
+import { searchSimilarChunks } from '../../../lib/database';
+import { searchMedicalTables } from '../../../lib/medical-table-processor';
+import { db } from '../../../lib/database';
+
+export async function POST(request: NextRequest) {
+  try {
+    const { query, userId, maxResults = 5, similarityThreshold = 0.7 } = await request.json();
+
+    if (!query || !userId) {
+      return NextResponse.json(
+        { error: 'Query and userId are required', success: false },
+        { status: 400 }
+      );
+    }
+
+    // Generate embedding for the search query
+    const embeddingResult = await generateEmbedding(query);
+    console.log(`Generated embedding dimensions: ${embeddingResult.embedding.length}`);
+
+    // Implement multi-stage retrieval for better RAG performance
+    const isQuestion = /^(who|what|when|where|why|how)\s/i.test(query);
+    
+    // Stage 1: Always try semantic search first (it's more contextually aware)
+    let finalResults = [];
+    const semanticThreshold = 0.2; // Lower threshold for semantic
+    
+    // Stage 2: If semantic finds good results, use higher semantic weight
+    // If semantic fails, rely more on keyword matching
+    let semanticWeight, keywordWeight, hybridThreshold;
+    
+    const semanticResults = await searchSimilarChunks(
+      embeddingResult.embedding,
+      userId,
+      semanticThreshold,
+      maxResults * 2
+    );
+    
+    const hasGoodSemanticResults = semanticResults.some(r => r.similarity_score > 0.4);
+    
+    if (hasGoodSemanticResults) {
+      // High confidence semantic results - trust them more
+      semanticWeight = 0.8;
+      keywordWeight = 0.2;
+      hybridThreshold = 0.25;
+    } else {
+      // Poor semantic results - rely more on keywords
+      semanticWeight = 0.4;
+      keywordWeight = 0.6;
+      hybridThreshold = 0.2; // Lower threshold when relying on keywords
+    }
+    
+    console.log(`Query type: ${isQuestion ? 'question' : 'statement'}, semantic quality: ${hasGoodSemanticResults ? 'high' : 'low'}`);
+    console.log(`Using weights - semantic: ${semanticWeight}, keyword: ${keywordWeight}, threshold: ${hybridThreshold}`);
+
+    console.log(`Semantic results: ${semanticResults.length}`);
+
+    // 2. Extract keywords with improved strategy
+    const extractKeywords = (text: string): string[] => {
+      // Only remove very common words, keep domain-specific terms
+      const stopWords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by'];
+      const words = text.toLowerCase()
+        .replace(/[^\w\s]/g, '') // Remove punctuation
+        .split(/\s+/)
+        .filter(word => word.length > 2 && !stopWords.includes(word));
+      
+      // Keep important question words as they provide context
+      const questionWords = ['who', 'what', 'when', 'where', 'why', 'how'];
+      const originalWords = text.toLowerCase().split(/\s+/);
+      questionWords.forEach(qw => {
+        if (originalWords.includes(qw) && !words.includes(qw)) {
+          words.unshift(qw); // Add question words at the beginning for context
+        }
+      });
+      
+      return words;
+    };
+
+    const keywords = extractKeywords(query);
+    console.log(`Extracted keywords: ${keywords.join(', ')}`);
+    
+    let keywordResults: { rows: any[] } = { rows: [] };
+    if (keywords.length > 0) {
+      // Search for any of the keywords
+      const keywordConditions = keywords.map((_, index) => `c.text ILIKE $${index + 3}`).join(' OR ');
+      const keywordQuery = `
+        SELECT c.id as chunk_id, c.document_id, d.filename, c.text as chunk_text, 
+               c.chunk_index, 0.8 as keyword_score
+        FROM chunks c
+        JOIN documents d ON c.document_id = d.id
+        WHERE d.user_id = $1 
+          AND d.status = 'completed'
+          AND (${keywordConditions})
+        ORDER BY c.chunk_index
+        LIMIT $2
+      `;
+      
+      const keywordParams = [
+        userId,                                    // $1
+        maxResults,                              // $2
+        ...keywords.map(keyword => `%${keyword}%`) // $3, $4, $5...
+      ];
+      
+      keywordResults = await db.query(keywordQuery, keywordParams);
+    }
+    console.log(`Keyword results: ${keywordResults.rows.length}`);
+
+    // 3. Combine and score results
+    const combinedResults = new Map();
+    
+    // Add semantic results with weighted scores
+    semanticResults.forEach(result => {
+      const hybridScore = (result.similarity_score * semanticWeight);
+      combinedResults.set(result.chunk_id, {
+        ...result,
+        semantic_score: result.similarity_score,
+        keyword_score: 0,
+        combined_score: hybridScore
+      });
+    });
+
+    // Add/boost keyword results
+    keywordResults.rows.forEach(result => {
+      const existing = combinedResults.get(result.chunk_id);
+      const keywordScore = result.keyword_score * keywordWeight;
+      
+      if (existing) {
+        // Boost existing result with keyword score
+        existing.keyword_score = result.keyword_score;
+        existing.combined_score += keywordScore;
+      } else {
+        // Add new keyword-only result
+        combinedResults.set(result.chunk_id, {
+          chunk_id: result.chunk_id,
+          document_id: result.document_id,
+          filename: result.filename,
+          chunk_text: result.chunk_text,
+          chunk_index: result.chunk_index,
+          semantic_score: 0,
+          keyword_score: result.keyword_score,
+          combined_score: keywordScore
+        });
+      }
+    });
+
+    // 4. Filter by hybrid threshold and sort by combined score
+    const allCombined = Array.from(combinedResults.values());
+    console.log(`Combined results before filtering: ${allCombined.length}`);
+    if (allCombined.length > 0) {
+      console.log(`Sample combined score: ${allCombined[0].combined_score}`);
+    }
+    
+    const results = allCombined
+      .filter(result => result.combined_score >= hybridThreshold)
+      .sort((a, b) => b.combined_score - a.combined_score)
+      .slice(0, maxResults);
+    console.log(`Final results after threshold ${hybridThreshold}: ${results.length}`);
+
+    // 5. Check if query contains medical terms and search medical tables
+    const medicalTerms = ['glucose', 'cholesterol', 'blood pressure', 'test', 'lab', 'vital', 'medication', 'drug', 'result', 'normal', 'high', 'low'];
+    const isMedicalQuery = medicalTerms.some(term => query.toLowerCase().includes(term));
+    
+    let medicalTableResults = [];
+    if (isMedicalQuery) {
+      try {
+        medicalTableResults = await searchMedicalTables(query, userId, {
+          limit: Math.ceil(maxResults / 2), // Get half as many table results
+          similarityThreshold: hybridThreshold
+        });
+        console.log(`Medical table search found ${medicalTableResults.length} results`);
+      } catch (medicalError) {
+        console.error('Medical table search failed:', medicalError);
+      }
+    }
+
+    console.log(`Search query: "${query}", threshold: ${similarityThreshold}, results: ${results.length}`, 
+                `embedding sample: [${embeddingResult.embedding.slice(0,3).join(',')}...]`);
+    
+    if (results.length > 0) {
+      console.log(`Hybrid search results: ${results.length}`);
+      console.log(`Top result - semantic: ${results[0].semantic_score}, keyword: ${results[0].keyword_score}, combined: ${results[0].combined_score}`);
+    } else {
+      console.log('No hybrid results found - adjusting weights may help');
+    }
+
+    return NextResponse.json({
+      success: true,
+      query,
+      results,
+      resultsCount: results.length,
+      medicalTables: medicalTableResults,
+      medicalTablesCount: medicalTableResults.length,
+      isMedicalQuery,
+      searchParams: {
+        maxResults,
+        similarityThreshold,
+        userId
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error: any) {
+    console.error('Search API error:', error);
+    
+    return NextResponse.json(
+      { 
+        error: error.message || 'Search failed', 
+        success: false,
+        query: '',
+        results: [],
+        resultsCount: 0
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET() {
+  return NextResponse.json({
+    message: 'Search API',
+    methods: ['POST'],
+    endpoint: '/api/search'
+  });
+}

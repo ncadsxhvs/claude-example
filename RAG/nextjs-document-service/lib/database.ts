@@ -243,7 +243,7 @@ export class ChunkService {
     `;
     
     const values = [
-      JSON.stringify(queryEmbedding),
+      `[${queryEmbedding.join(',')}]`,
       userId,
       similarityThreshold,
       maxResults
@@ -277,7 +277,7 @@ export class ChunkService {
     `;
     
     const values = [
-      JSON.stringify(queryEmbedding),
+      `[${queryEmbedding.join(',')}]`,
       queryText,
       userId,
       semanticWeight,
@@ -340,4 +340,25 @@ export class StatsService {
       latest_upload: null
     };
   }
+}
+
+// Wrapper functions for API routes
+export async function searchSimilarChunks(
+  queryEmbedding: number[],
+  userId: string,
+  similarityThreshold: number = 0.7,
+  maxResults: number = 5
+): Promise<SearchResult[]> {
+  return ChunkService.searchSimilarChunks(queryEmbedding, userId, {
+    similarityThreshold,
+    maxResults
+  });
+}
+
+export async function getUserDocuments(userId: string): Promise<DocumentRecord[]> {
+  return DocumentService.getUserDocuments(userId);
+}
+
+export async function getDocumentChunks(documentId: string): Promise<ChunkRecord[]> {
+  return ChunkService.getDocumentChunks(documentId);
 }

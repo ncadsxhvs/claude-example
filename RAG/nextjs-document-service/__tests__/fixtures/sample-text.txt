@@ -1,0 +1,13 @@
+This is a simple text document for testing purposes.
+
+It contains multiple paragraphs to test text chunking functionality.
+
+The document discusses various medical concepts like diabetes, blood pressure monitoring, and medication management. This helps test medical entity recognition.
+
+Key medical terms include:
+- Glucose levels
+- Blood pressure readings  
+- Medication dosages
+- Patient monitoring
+
+This content should be processed into multiple chunks depending on the chunking configuration.

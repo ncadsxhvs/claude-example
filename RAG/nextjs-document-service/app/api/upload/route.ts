@@ -4,11 +4,27 @@ import { createHash } from 'crypto';
 import { db } from '../../../lib/database';
 import { ragConfig } from '../../../lib/config';
 import { createDocumentProcessor } from '../../../lib/realtime';
+import { generateEmbedding } from '../../../lib/embeddings';
+import { processPDF, ExtractedTable } from '../../../lib/pdf-processor';
+import { storeMedicalTables } from '../../../lib/medical-table-processor';
 
-// Simple text extraction function for demonstration
-async function extractTextFromFile(file: File): Promise<string> {
-  const text = await file.text();
-  return text;
+// Extract text from supported file types
+async function extractTextFromFile(file: File): Promise<{ text: string; tables?: ExtractedTable[] }> {
+  const fileExtension = file.name.toLowerCase().split('.').pop();
+  
+  if (fileExtension === 'pdf') {
+    // Process PDF with table extraction
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const pdfResult = await processPDF(buffer);
+    return {
+      text: pdfResult.text,
+      tables: pdfResult.tables
+    };
+  } else {
+    // Handle text files
+    const text = await file.text();
+    return { text };
+  }
 }
 
 // Generate content hash for duplicate detection
@@ -62,16 +78,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Support text files (check both MIME type and file extension)
+    // Support text files and PDFs
     const fileExtension = file.name.toLowerCase().split('.').pop();
-    const supportedExtensions = ['txt', 'md', 'markdown'];
-    const supportedMimeTypes = ['text/plain', 'text/markdown', 'text/x-markdown', 'application/octet-stream'];
+    const supportedExtensions = ['txt', 'md', 'markdown', 'pdf'];
+    const supportedMimeTypes = [
+      'text/plain', 
+      'text/markdown', 
+      'text/x-markdown',
+      'application/pdf',
+      'application/octet-stream'
+    ];
     
     const isValidType = supportedMimeTypes.includes(file.type) || supportedExtensions.includes(fileExtension || '');
     
     if (!isValidType) {
       return NextResponse.json(
-        { error: `Only .txt, .md, and .markdown files are supported. Received: ${file.type} for ${file.name}` },
+        { error: `Only .txt, .md, .markdown, .pdf files are supported. Received: ${file.type} for ${file.name}` },
         { status: 400 }
       );
     }
@@ -91,9 +113,11 @@ export async function POST(request: NextRequest) {
     const processor = createDocumentProcessor(tempDocumentId, userId, file.name);
     processor.queued();
 
-    // Extract text content
+    // Extract text content and tables
     processor.extractingText();
-    const extractedText = await extractTextFromFile(file);
+    const extractionResult = await extractTextFromFile(file);
+    const extractedText = extractionResult.text;
+    const extractedTables = extractionResult.tables || [];
 
     if (!extractedText.trim()) {
       processor.failed('File appears to be empty');
@@ -137,7 +161,7 @@ export async function POST(request: NextRequest) {
           status: existing.status,
           uploadedAt: existing.uploaded_at
         },
-        chunks: chunksResult.rows.map((chunk, index) => ({
+        chunks: chunksResult.rows.map((chunk: any, index: number) => ({
           id: `${existing.id}-${chunk.chunk_index}`,
           index: chunk.chunk_index,
           text: chunk.text,
@@ -206,17 +230,21 @@ export async function POST(request: NextRequest) {
     realProcessor.chunkingProgress(textChunks.length, textChunks.length);
 
     try {
-      // Step 3: Insert chunks into database (without embeddings for now)
+      // Step 3: Insert chunks into database with embeddings
       realProcessor.storingChunks(textChunks.length);
       
       const insertChunksQuery = `
-        INSERT INTO chunks (document_id, chunk_index, text, word_count, character_count, metadata)
-        VALUES ($1, $2, $3, $4, $5, $6)
+        INSERT INTO chunks (document_id, chunk_index, text, word_count, character_count, embedding, metadata)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
       `;
 
       for (let i = 0; i < textChunks.length; i++) {
         const chunk = textChunks[i];
         const wordCount = chunk.split(/\s+/).filter(w => w.length > 0).length;
+        
+        // Generate embedding for this chunk
+        const embeddingResult = await generateEmbedding(chunk);
+        const embeddingVector = `[${embeddingResult.embedding.join(',')}]`;
         
         await db.query(insertChunksQuery, [
           documentId,
@@ -224,9 +252,11 @@ export async function POST(request: NextRequest) {
           chunk,
           wordCount,
           chunk.length,
+          embeddingVector,
           JSON.stringify({
             createdAt: new Date().toISOString(),
-            needsEmbedding: true
+            embeddingGenerated: true,
+            tokensUsed: embeddingResult.usage.total_tokens
           })
         ]);
 
@@ -242,10 +272,24 @@ export async function POST(request: NextRequest) {
         ['completed', textChunks.length, documentId]
       );
 
+      // Step 5: Process medical tables if any were extracted
+      let medicalTablesCount = 0;
+      if (extractedTables.length > 0) {
+        try {
+          realProcessor.storingChunks(textChunks.length, 'Processing medical tables...');
+          const storedTables = await storeMedicalTables(documentId, extractedTables);
+          medicalTablesCount = storedTables.length;
+          console.log(`Stored ${medicalTablesCount} medical tables for document ${documentId}`);
+        } catch (error) {
+          console.error('Error processing medical tables:', error);
+          // Continue processing even if medical table storage fails
+        }
+      }
+
       // Mark processing as completed
       realProcessor.completed(textChunks.length, extractedText.length);
 
-      // Step 5: Return success response (matching the expected format)
+      // Step 6: Return success response (matching the expected format)
       return NextResponse.json({
         success: true,
         document: {
@@ -254,6 +298,7 @@ export async function POST(request: NextRequest) {
           size: file.size,
           textLength: extractedText.length,
           chunksCount: textChunks.length,
+          medicalTablesCount: medicalTablesCount,
           processedAt: new Date().toISOString()
         },
         chunks: textChunks.map((text, index) => ({
