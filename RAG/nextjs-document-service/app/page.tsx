@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import DocumentUpload from '../components/DocumentUpload';
 import SimpleSearch from '../components/SimpleSearch';
+import ChatInterface from '../components/ChatInterface';
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<'upload' | 'search'>('upload');
+  const [activeTab, setActiveTab] = useState<'upload' | 'search' | 'chat'>('upload');
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -16,7 +17,7 @@ export default function Home() {
             Document RAG System
           </h1>
           <p className="text-gray-600">
-            Upload documents and search with AI-powered vector similarity
+            Upload documents, search with AI-powered vector similarity, and chat with GPT-4o
           </p>
         </div>
 
@@ -44,6 +45,16 @@ export default function Home() {
               >
                 🔍 Vector Search
               </button>
+              <button
+                onClick={() => setActiveTab('chat')}
+                className={`px-6 py-2 rounded-md font-medium text-sm transition-colors ${
+                  activeTab === 'chat'
+                    ? 'bg-white text-blue-600 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                🤖 AI Chat
+              </button>
             </div>
           </div>
         </div>
@@ -52,6 +63,7 @@ export default function Home() {
         <div className="bg-white rounded-lg shadow-sm border">
           {activeTab === 'upload' && <DocumentUpload />}
           {activeTab === 'search' && <SimpleSearch />}
+          {activeTab === 'chat' && <ChatInterface />}
         </div>
       </div>
     </div>

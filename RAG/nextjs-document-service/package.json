@@ -8,16 +8,19 @@
     "build": "next build",
     "start": "next start -p 8003",
     "lint": "next lint",
-    "test": "jest",
+    "test": "jest simple.test.ts",
+    "test:simple": "jest simple.test.ts",
+    "test:embeddings": "jest embedding-validation.test.ts",
+    "test:all": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:unit": "jest --testPathPattern=unit",
-    "test:integration": "jest --testPathPattern=integration",
-    "test:e2e": "jest --testPathPattern=e2e"
+    "validate:embeddings": "node scripts/validate-embeddings.js",
+    "cleanup:database": "node scripts/cleanup-database.js"
   },
   "dependencies": {
     "@langchain/textsplitters": "^0.0.1",
     "@types/pdf-parse": "^1.1.5",
+    "dotenv": "^17.2.1",
     "markdown-it": "^14.0.0",
     "multer": "^1.4.5-lts.1",
     "next": "^14.0.4",

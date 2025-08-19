@@ -194,13 +194,14 @@ async function performHybridSearch(query: string, userId: string, maxResults: nu
 
   console.log(`Hybrid weights - semantic: ${semanticWeight}, keyword: ${keywordWeight}, threshold: ${hybridThreshold}`);
 
-  // Combine results
+  // Combine results with proper deduplication
   const combinedResults = new Map();
   
   // Add semantic results
   semanticResults.forEach((result: any) => {
+    const key = String(result.chunk_id); // Ensure string key
     const hybridScore = result.similarity_score * semanticWeight;
-    combinedResults.set(result.chunk_id, {
+    combinedResults.set(key, {
       ...result,
       semantic_score: result.similarity_score,
       keyword_score: 0,
@@ -211,14 +212,16 @@ async function performHybridSearch(query: string, userId: string, maxResults: nu
 
   // Add/boost keyword results
   keywordResults.forEach((result: any) => {
-    const existing = combinedResults.get(result.chunk_id);
+    const key = String(result.chunk_id); // Ensure string key
+    const existing = combinedResults.get(key);
     const keywordScore = result.similarity_score * keywordWeight;
     
     if (existing) {
       existing.keyword_score = result.similarity_score;
       existing.combined_score += keywordScore;
+      console.log(`Merged duplicate chunk_id: ${key} (semantic + keyword)`);
     } else {
-      combinedResults.set(result.chunk_id, {
+      combinedResults.set(key, {
         ...result,
         semantic_score: 0,
         keyword_score: result.similarity_score,
@@ -235,6 +238,7 @@ async function performHybridSearch(query: string, userId: string, maxResults: nu
     .slice(0, maxResults);
 
   console.log(`Hybrid final: ${finalResults.length} results after filtering`);
+  console.log(`Deduplication stats - Original: ${semanticResults.length + keywordResults.length}, Final: ${finalResults.length}, Duplicates removed: ${(semanticResults.length + keywordResults.length) - finalResults.length}`);
 
   return {
     results: finalResults.map((r: any) => ({
