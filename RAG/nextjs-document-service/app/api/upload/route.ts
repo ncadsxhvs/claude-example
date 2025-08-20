@@ -298,7 +298,7 @@ export async function POST(request: NextRequest) {
       let medicalTablesCount = 0;
       if (extractedTables.length > 0) {
         try {
-          realProcessor.storingChunks(textChunks.length, 'Processing medical tables...');
+          realProcessor.storingChunks(textChunks.length);
           const storedTables = await storeMedicalTables(documentId, extractedTables);
           medicalTablesCount = storedTables.length;
           console.log(`Stored ${medicalTablesCount} medical tables for document ${documentId}`);

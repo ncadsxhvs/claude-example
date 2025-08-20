@@ -216,7 +216,7 @@ async function performHybridSearch(query: string, userId: string, maxResults: nu
   const combinedResults = new Map<string, any>();
   
   // Add semantic results with their weights
-  semanticResults.forEach(result => {
+  semanticResults.forEach((result: any) => {
     const key = String(result.chunk_id); // Ensure string key
     combinedResults.set(key, {
       ...result,
@@ -226,7 +226,7 @@ async function performHybridSearch(query: string, userId: string, maxResults: nu
   });
   
   // Add keyword results, updating score if already exists
-  keywordResults.forEach(result => {
+  keywordResults.forEach((result: any) => {
     const key = String(result.chunk_id); // Ensure string key
     if (combinedResults.has(key)) {
       const existing = combinedResults.get(key);
@@ -244,7 +244,7 @@ async function performHybridSearch(query: string, userId: string, maxResults: nu
   
   // Sort by final score and limit results
   const finalResults = Array.from(combinedResults.values())
-    .sort((a, b) => b.final_score - a.final_score)
+    .sort((a: any, b: any) => b.final_score - a.final_score)
     .slice(0, maxResults);
   
   console.log(`Hybrid final: ${finalResults.length} results after filtering`);
