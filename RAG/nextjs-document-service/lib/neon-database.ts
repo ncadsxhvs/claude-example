@@ -278,11 +278,12 @@ export class NeonStatsService {
     latest_upload: Date | null;
   }> {
     const result = await sql`SELECT * FROM get_user_document_stats(${userId})`;
-    return result[0] || {
-      total_documents: 0,
-      total_chunks: 0,
-      total_text_length: 0,
-      latest_upload: null
+    const stats = result[0];
+    return {
+      total_documents: stats?.total_documents || 0,
+      total_chunks: stats?.total_chunks || 0,
+      total_text_length: stats?.total_text_length || 0,
+      latest_upload: stats?.latest_upload || null
     };
   }
 
