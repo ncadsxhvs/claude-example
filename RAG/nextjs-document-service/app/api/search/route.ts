@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateEmbedding } from '../../../lib/embeddings';
-import { searchSimilarChunks } from '../../../lib/database';
-import { db } from '../../../lib/database';
+import { searchSimilarChunks, getChunkService, searchMedicalTables, getRawDatabase } from '../../../lib/database-adapter';
 
 export async function POST(request: NextRequest) {
   try {
@@ -151,11 +150,12 @@ async function performKeywordSearch(query: string, userId: string, maxResults: n
     ...keywords.map(keyword => `%${keyword}%`) // $3, $4, $5...
   ];
   
-  const keywordResults = await db.query(keywordQuery, keywordParams);
-  console.log(`Keyword search found ${keywordResults.rows.length} results`);
+  const chunkService = await getChunkService();
+  const keywordResults = await chunkService.searchKeywordChunks(query, userId, { maxResults });
+  console.log(`Keyword search found ${keywordResults.length} results`);
 
   return {
-    results: keywordResults.rows.map((r: any) => ({
+    results: keywordResults.map((r: any) => ({
       chunk_id: r.chunk_id,
       document_id: r.document_id,
       filename: r.filename,
@@ -271,10 +271,7 @@ async function performMedicalTableSearch(query: string, userId: string, maxResul
   console.log(`Performing medical table search for: "${query}"`);
   
   try {
-    // Import the medical table search function
-    const { searchMedicalTables } = await import('../../../lib/medical-table-processor');
-    
-    // Search medical tables
+    // Search medical tables using database adapter
     const results = await searchMedicalTables(query, userId, {
       limit: maxResults,
       similarityThreshold: threshold

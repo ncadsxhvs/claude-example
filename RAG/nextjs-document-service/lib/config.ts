@@ -44,12 +44,15 @@ function validateOptionalEnvVar(name: string, defaultValue: string = ''): string
 
 // Database configuration
 export const databaseConfig: DatabaseConfig = {
-  host: validateEnvVar('DB_HOST', 'localhost'),
-  port: parseInt(validateEnvVar('DB_PORT', '5432')),
-  name: validateEnvVar('DB_NAME', 'rag_system'),
-  user: validateEnvVar('DB_USER', 'ddctu'),
-  password: validateOptionalEnvVar('DB_PASSWORD', ''),
+  host: validateEnvVar('DB_HOST', process.env.PGHOST || 'localhost'),
+  port: parseInt(validateEnvVar('DB_PORT', process.env.PGPORT || '5432')),
+  name: validateEnvVar('DB_NAME', process.env.PGDATABASE || 'rag_system'),
+  user: validateEnvVar('DB_USER', process.env.PGUSER || 'ddctu'),
+  password: validateOptionalEnvVar('DB_PASSWORD', process.env.PGPASSWORD || ''),
 };
+
+// Check if we should use Neon serverless driver (for Vercel) or pg driver (for local)
+export const useNeonDriver = !!process.env.DATABASE_URL;
 
 // OpenAI configuration
 export const openaiConfig: OpenAIConfig = {

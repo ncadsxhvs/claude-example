@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@langchain/textsplitters": "^0.0.1",
+    "@neondatabase/serverless": "^1.0.1",
     "@types/pdf-parse": "^1.1.5",
     "dotenv": "^17.2.1",
     "next": "^14.0.4",
