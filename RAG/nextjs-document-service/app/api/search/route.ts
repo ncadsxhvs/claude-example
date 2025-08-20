@@ -266,17 +266,53 @@ async function performHybridSearch(query: string, userId: string, maxResults: nu
   };
 }
 
-// Medical table search (placeholder for now)
+// Medical table search using the medical table processor
 async function performMedicalTableSearch(query: string, userId: string, maxResults: number, threshold: number) {
-  console.log(`Medical table search not fully implemented yet`);
+  console.log(`Performing medical table search for: "${query}"`);
   
-  return {
-    results: [],
-    searchDetails: {
-      message: 'Medical table search coming soon',
-      searchType: 'medical_tables'
-    }
-  };
+  try {
+    // Import the medical table search function
+    const { searchMedicalTables } = await import('../../../lib/medical-table-processor');
+    
+    // Search medical tables
+    const results = await searchMedicalTables(query, userId, {
+      limit: maxResults,
+      similarityThreshold: threshold
+    });
+    
+    console.log(`Medical table search found ${results.length} results`);
+    
+    return {
+      results: results.map((result: any) => ({
+        chunk_id: `table-${result.table_id}`,
+        document_id: result.document_id,
+        filename: result.filename,
+        chunk_text: result.searchable_text,
+        chunk_index: result.table_index,
+        similarity_score: parseFloat(result.similarity_score),
+        search_type: 'medical_table',
+        table_type: result.table_type,
+        headers: result.headers,
+        raw_data: JSON.parse(result.raw_data),
+        confidence: parseFloat(result.confidence_score)
+      })),
+      searchDetails: {
+        totalResults: results.length,
+        threshold,
+        searchType: 'medical_tables'
+      }
+    };
+    
+  } catch (error: any) {
+    console.error('Medical table search error:', error);
+    return {
+      results: [],
+      searchDetails: {
+        error: error.message,
+        searchType: 'medical_tables'
+      }
+    };
+  }
 }
 
 export async function GET() {
