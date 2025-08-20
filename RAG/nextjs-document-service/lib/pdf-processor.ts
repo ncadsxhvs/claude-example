@@ -31,8 +31,8 @@ export interface PDFProcessingResult {
  */
 export async function processPDF(buffer: Buffer): Promise<PDFProcessingResult> {
   try {
-    // Dynamic import to avoid module resolution issues
-    const pdf = (await import('pdf-parse')).default;
+    // Use require instead of dynamic import to avoid pdf-parse debug mode issue
+    const pdf = require('pdf-parse');
     
     // Extract basic text content
     const pdfData = await pdf(buffer);
@@ -62,8 +62,8 @@ export async function processPDF(buffer: Buffer): Promise<PDFProcessingResult> {
  */
 async function extractTablesFromPDF(buffer: Buffer): Promise<ExtractedTable[]> {
   try {
-    // Dynamic import to avoid module resolution issues
-    const pdf = (await import('pdf-parse')).default;
+    // Use require instead of dynamic import to avoid pdf-parse debug mode issue
+    const pdf = require('pdf-parse');
     
     // Note: tabula-js may require Java installation
     // For now, implement basic table detection from text
@@ -72,7 +72,7 @@ async function extractTablesFromPDF(buffer: Buffer): Promise<ExtractedTable[]> {
   } catch (error) {
     console.error('Table extraction error:', error);
     // Fallback to text-based table detection
-    const pdf = (await import('pdf-parse')).default;
+    const pdf = require('pdf-parse');
     const pdfData = await pdf(buffer);
     return detectTablesFromText(pdfData.text);
   }
@@ -137,12 +137,22 @@ function detectTablesFromText(text: string): ExtractedTable[] {
  * Check if a line looks like a table row
  */
 function isTableRow(line: string): boolean {
+  // Skip empty or whitespace-only lines
+  if (!line.trim()) {
+    return false;
+  }
+  
+  // Skip separator lines (like -------|-------|-----)
+  if (/^[\s\-\|]*$/.test(line)) {
+    return false;
+  }
+  
   // Look for common table patterns
   const patterns = [
-    /\|.*\|/,           // Pipe-separated
-    /\t.*\t/,           // Tab-separated
-    /\s{3,}.*\s{3,}/,   // Multiple spaces
-    /^\s*\w+\s+[\d\.]/, // Name followed by number
+    /.*\|.*\|.*/,       // Pipe-separated (content with pipes)
+    /.*\t.*\t.*/,       // Tab-separated (content with tabs)  
+    /\s{3,}.+\s{3,}/,   // Multiple spaces (must have content between spaces)
+    /^\s*\w+\s+[\d\.]/,  // Name followed by number
   ];
   
   return patterns.some(pattern => pattern.test(line));

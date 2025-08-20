@@ -57,7 +57,7 @@ export default function FileUpload({ onFileSelect, selectedFile, isProcessing }:
         <input
           ref={fileInputRef}
           type="file"
-          accept=".txt,.md,.markdown"
+          accept=".txt,.md,.markdown,.pdf,.json"
           onChange={handleFileChange}
           className="hidden"
           disabled={isProcessing}
@@ -65,12 +65,25 @@ export default function FileUpload({ onFileSelect, selectedFile, isProcessing }:
         
         {selectedFile ? (
           <div>
-            <div className="text-4xl mb-4">📄</div>
+            <div className="text-4xl mb-4">
+              {selectedFile.name.toLowerCase().endsWith('.pdf') ? '📕' : 
+               selectedFile.name.toLowerCase().endsWith('.json') ? '📊' : '📄'}
+            </div>
             <h3 className="text-lg font-semibold text-gray-900">{selectedFile.name}</h3>
             <p className="text-gray-600 mt-2">
-              {(selectedFile.size / 1024).toFixed(1)} KB
+              {selectedFile.size > 1024 * 1024 
+                ? `${(selectedFile.size / (1024 * 1024)).toFixed(1)} MB`
+                : `${(selectedFile.size / 1024).toFixed(1)} KB`
+              }
             </p>
             <p className="text-sm text-gray-500 mt-2">
+              {selectedFile.name.toLowerCase().endsWith('.pdf') 
+                ? 'PDF with medical table extraction' 
+                : selectedFile.name.toLowerCase().endsWith('.json')
+                ? 'JSON with table extraction'
+                : 'Text document'}
+            </p>
+            <p className="text-sm text-gray-500 mt-1">
               Click to select a different file
             </p>
           </div>
@@ -81,7 +94,7 @@ export default function FileUpload({ onFileSelect, selectedFile, isProcessing }:
               Drop your file here or click to browse
             </h3>
             <p className="text-gray-600">
-              Supports .txt, .md, .markdown files (max 10MB)
+              Supports .txt, .md, .markdown, .pdf, .json files (max 25MB)
             </p>
           </div>
         )}

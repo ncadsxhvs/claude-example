@@ -131,7 +131,7 @@ export default function DocumentUpload() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".txt,.md"
+              accept=".txt,.md,.markdown,.pdf,.json"
               onChange={handleFileUpload}
               className="hidden"
               disabled={isUploading}
@@ -143,8 +143,12 @@ export default function DocumentUpload() {
                 <p className="text-gray-600 mb-4">
                   Click to upload or drag and drop
                 </p>
-                <p className="text-sm text-gray-500 mb-4">
-                  Supports: .txt, .md files
+                <p className="text-sm text-gray-500 mb-2">
+                  Supports: .txt, .md, .markdown, .pdf, .json files (max 25MB)
+                </p>
+                <p className="text-xs text-gray-400 mb-4">
+                  📕 PDF files include medical table extraction<br/>
+                  📊 JSON files include table extraction
                 </p>
                 <button
                   onClick={() => fileInputRef.current?.click()}

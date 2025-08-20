@@ -177,6 +177,17 @@ function extractMedicalEntities(text: string): string[] {
     }
   });
   
+  // Handle special cases and variations
+  if (lowerText.includes('hemoglobin a1c') || lowerText.includes('hgb a1c')) {
+    foundEntities.push('hba1c');
+  }
+  if (lowerText.includes('mg/dl') && !foundEntities.includes('mg/dl')) {
+    foundEntities.push('mg/dl');
+  }
+  if (lowerText.includes('mmhg') && !foundEntities.includes('mmhg')) {
+    foundEntities.push('mmhg');
+  }
+  
   // Remove duplicates and return
   return Array.from(new Set(foundEntities));
 }

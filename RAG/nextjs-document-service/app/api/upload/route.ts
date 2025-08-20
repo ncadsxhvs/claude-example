@@ -6,6 +6,7 @@ import { ragConfig } from '../../../lib/config';
 import { createDocumentProcessor } from '../../../lib/realtime';
 import { generateEmbedding } from '../../../lib/embeddings';
 import { processPDF, ExtractedTable } from '../../../lib/pdf-processor';
+import { processJson, ExtractedJsonTable } from '../../../lib/json-processor';
 import { storeMedicalTables } from '../../../lib/medical-table-processor';
 
 // Extract text from supported file types
@@ -19,6 +20,25 @@ async function extractTextFromFile(file: File): Promise<{ text: string; tables?:
     return {
       text: pdfResult.text,
       tables: pdfResult.tables
+    };
+  } else if (fileExtension === 'json') {
+    // Process JSON with table extraction
+    const jsonContent = await file.text();
+    const jsonResult = processJson(jsonContent);
+    
+    // Convert ExtractedJsonTable to ExtractedTable format
+    const tables: ExtractedTable[] = jsonResult.tables.map(jsonTable => ({
+      data: jsonTable.data,
+      headers: jsonTable.headers,
+      rowCount: jsonTable.rowCount,
+      colCount: jsonTable.colCount,
+      page: 1, // JSON doesn't have pages
+      confidence: jsonTable.confidence
+    }));
+    
+    return {
+      text: jsonResult.text,
+      tables: tables
     };
   } else {
     // Handle text files
@@ -78,14 +98,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Support text files and PDFs
+    // Support text files, PDFs, and JSON
     const fileExtension = file.name.toLowerCase().split('.').pop();
-    const supportedExtensions = ['txt', 'md', 'markdown', 'pdf'];
+    const supportedExtensions = ['txt', 'md', 'markdown', 'pdf', 'json'];
     const supportedMimeTypes = [
       'text/plain', 
       'text/markdown', 
       'text/x-markdown',
       'application/pdf',
+      'application/json',
+      'text/json',
       'application/octet-stream'
     ];
     
@@ -93,7 +115,7 @@ export async function POST(request: NextRequest) {
     
     if (!isValidType) {
       return NextResponse.json(
-        { error: `Only .txt, .md, .markdown, .pdf files are supported. Received: ${file.type} for ${file.name}` },
+        { error: `Only .txt, .md, .markdown, .pdf, .json files are supported. Received: ${file.type} for ${file.name}` },
         { status: 400 }
       );
     }
