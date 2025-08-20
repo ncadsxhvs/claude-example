@@ -206,7 +206,7 @@ async function performHybridSearch(query: string, userId: string, maxResults: nu
   console.log(`Hybrid: ${semanticResults.length} semantic + ${keywordResults.length} keyword results`);
   
   // Determine weights based on semantic quality
-  const avgSemanticScore = semanticResults.reduce((sum: number, r) => sum + (r.similarity_score || 0), 0) / semanticResults.length;
+  const avgSemanticScore = semanticResults.reduce((sum: number, r: any) => sum + (r.similarity_score || 0), 0) / semanticResults.length;
   const semanticWeight = avgSemanticScore > 0.5 ? 0.8 : 0.4;
   const keywordWeight = 1 - semanticWeight;
   
