@@ -36,7 +36,7 @@ async function initializeDatabase() {
       sql: neonDb.neonSql
     };
   } else {
-    // Use traditional pg driver
+    // Use traditional pg driver with fallback for local development
     const pgDb = await import('./database');
     
     // Test connection
@@ -45,9 +45,44 @@ async function initializeDatabase() {
       throw new Error('Failed to connect to PostgreSQL database');
     }
     
+    // Create a wrapper that uses the old search methods for local development
     dbService = {
       DocumentService: pgDb.DocumentService,
-      ChunkService: pgDb.ChunkService,
+      ChunkService: {
+        ...pgDb.ChunkService,
+        // Override search methods to use traditional queries for local development
+        searchKeywordChunks: async (queryText: string, userId: string, options: any = {}) => {
+          const { maxResults = 5 } = options;
+          
+          // Use simple ILIKE search for local development
+          const keywords = queryText.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+          if (keywords.length === 0) return [];
+          
+          const keywordConditions = keywords.map((_, index) => `c.text ILIKE $${3 + index}`).join(' OR ');
+          
+          const query = `
+            SELECT 
+              c.id as chunk_id,
+              c.document_id,
+              d.filename,
+              c.text as chunk_text,
+              c.chunk_index,
+              c.page,
+              0.5 as keyword_score
+            FROM chunks c
+            JOIN documents d ON c.document_id = d.id
+            WHERE d.user_id = $1 
+              AND d.status = 'completed'
+              AND (${keywordConditions})
+            ORDER BY c.chunk_index
+            LIMIT $2
+          `;
+          
+          const params = [userId, maxResults, ...keywords.map(keyword => `%${keyword}%`)];
+          const result = await pgDb.db.query(query, params);
+          return result.rows;
+        }
+      },
       StatsService: pgDb.StatsService,
       searchSimilarChunks: pgDb.searchSimilarChunks,
       getUserDocuments: pgDb.getUserDocuments,

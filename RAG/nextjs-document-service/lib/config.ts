@@ -52,7 +52,21 @@ export const databaseConfig: DatabaseConfig = {
 };
 
 // Check if we should use Neon serverless driver (for Vercel) or pg driver (for local)
-export const useNeonDriver = !!process.env.DATABASE_URL;
+// Use Neon only if:
+// 1. DATABASE_URL is set AND
+// 2. We're in production OR explicitly forced with USE_NEON=true
+export const useNeonDriver = !!(
+  process.env.DATABASE_URL && 
+  (process.env.NODE_ENV === 'production' || process.env.USE_NEON === 'true')
+);
+
+console.log('🔧 Database Driver Selection:', {
+  hasDbUrl: !!process.env.DATABASE_URL,
+  nodeEnv: process.env.NODE_ENV,
+  useNeonForced: process.env.USE_NEON,
+  selectedDriver: useNeonDriver ? 'neon' : 'pg',
+  reason: useNeonDriver ? 'production or USE_NEON=true' : 'development with local pg'
+});
 
 // OpenAI configuration
 export const openaiConfig: OpenAIConfig = {
