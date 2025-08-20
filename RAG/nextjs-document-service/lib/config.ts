@@ -44,7 +44,7 @@ export const databaseConfig: DatabaseConfig = {
   port: parseInt(validateEnvVar('DB_PORT', '5432')),
   name: validateEnvVar('DB_NAME', 'rag_system'),
   user: validateEnvVar('DB_USER', 'ddctu'),
-  password: process.env.DB_PASSWORD || '',
+  password: validateEnvVar('DB_PASSWORD', ''),
 };
 
 // OpenAI configuration

@@ -11,19 +11,146 @@ This includes:
 - Waiting for explicit approval before implementation
 
 ## Table of Contents
-1. [Architecture Overview](#architecture-overview)
-2. [System Architecture](#system-architecture) 
-3. [Development Phases](#development-phases)
-4. [Search Modes](#search-modes)
-5. [Database Schema](#database-schema)
-6. [API Endpoints](#api-endpoints)
-7. [PDF Table Processing Recommendations](#pdf-table-processing-recommendations)
-8. [Testing & Validation](#testing--validation)
-9. [Environment Setup](#environment-setup)
-10. [Performance Characteristics](#performance-characteristics)
-11. [Production Checklist](#production-checklist)
-12. [Critical Testing Requirements](#critical-testing-requirements)
-13. [Documentation Policy](#documentation-policy)
+1. [Complete Technology Stack](#complete-technology-stack)
+2. [Architecture Overview](#architecture-overview)
+3. [System Architecture](#system-architecture) 
+4. [Development Phases](#development-phases)
+5. [Search Modes](#search-modes)
+6. [Database Schema](#database-schema)
+7. [API Endpoints](#api-endpoints)
+8. [PDF Table Processing Recommendations](#pdf-table-processing-recommendations)
+9. [Testing & Validation](#testing--validation)
+10. [Environment Setup](#environment-setup)
+11. [Performance Characteristics](#performance-characteristics)
+12. [Production Checklist](#production-checklist)
+13. [Critical Testing Requirements](#critical-testing-requirements)
+14. [Documentation Policy](#documentation-policy)
+
+## Complete Technology Stack
+
+### 🤖 **AI & Machine Learning**
+| Feature | Technology | Version | Purpose |
+|---------|------------|---------|---------|
+| **Embeddings** | OpenAI `text-embedding-3-small` | Latest | Vector embeddings (1536 dimensions) |
+| **Chat AI** | OpenAI `gpt-4o` (primary) | Latest | AI question answering with RAG |
+| **Fallback Models** | `gpt-4-turbo`, `gpt-4`, `gpt-3.5-turbo` | Latest | Chat fallback chain for reliability |
+| **Text Splitting** | LangChain `RecursiveCharacterTextSplitter` | ^0.0.1 | Medical-aware text chunking |
+
+### 🗄️ **Database & Storage**
+| Component | Technology | Version | Purpose |
+|-----------|------------|---------|---------|
+| **Primary Database** | PostgreSQL | 16+ | Document metadata, chunks, medical tables |
+| **Vector Storage** | pgvector extension | Latest | Vector similarity search with HNSW indexes |
+| **Vector Similarity** | Cosine distance | Built-in | Semantic search calculations |
+| **Full-Text Search** | PostgreSQL ILIKE/GIN | Built-in | Keyword search with indexes |
+
+### 🌐 **Frontend & API Framework**
+| Component | Technology | Version | Purpose |
+|-----------|------------|---------|---------|
+| **Framework** | Next.js | ^14.0.4 | Full-stack React application |
+| **UI Library** | React | ^18.2.0 | Component-based user interface |
+| **Styling** | Tailwind CSS | ^3.3.6 | Utility-first CSS framework |
+| **TypeScript** | TypeScript | ^5.3.3 | Type-safe development |
+| **API Routes** | Next.js API Routes | Built-in | RESTful API endpoints |
+
+### 📄 **Document Processing**
+| File Type | Technology | Version | Capabilities |
+|-----------|------------|---------|-------------|
+| **PDF Processing** | pdf-parse | ^1.1.1 | Text extraction, medical table detection |
+| **PDF Tables (Future)** | tabula-js | ^1.0.1 | Enhanced table extraction (backlog) |
+| **JSON Processing** | Native JSON + Custom | Built-in | Array-of-objects, columnar data extraction |
+| **Markdown/Text** | Custom processors | Built-in | Medical-aware text processing |
+| **File Upload** | Native FormData/multipart | Built-in | Up to 25MB file handling |
+
+### 🔍 **Search Technologies**
+| Search Mode | Primary Technology | Secondary Technology | Use Case |
+|-------------|-------------------|---------------------|----------|
+| **Semantic** | OpenAI embeddings + pgvector | Cosine similarity | Conceptual understanding |
+| **Keyword** | PostgreSQL ILIKE | GIN indexes | Exact term matching |
+| **Hybrid** | Weighted combination | Adaptive scoring | Production-ready balance |
+| **Medical Tables** | Medical table embeddings | Entity recognition | Structured medical data |
+
+### 🏥 **Medical Intelligence**
+| Feature | Technology | Implementation | Purpose |
+|---------|------------|----------------|---------|
+| **Medical Entity Recognition** | Custom NLP + patterns | Rule-based + ML | Identify medical terms |
+| **Table Classification** | Pattern matching | Custom algorithms | lab_results, vital_signs, medication |
+| **Medical Terminology** | Preserved chunking | Smart separators | β-cells, A1C ≥6.5%, HNF-1α |
+| **Confidence Scoring** | Custom metrics | Statistical analysis | Table quality assessment |
+
+### ⚡ **Real-time & Performance**
+| Feature | Technology | Implementation | Purpose |
+|---------|------------|----------------|---------|
+| **Real-time Updates** | Server-Sent Events (SSE) | Custom event streams | Upload progress tracking |
+| **Background Processing** | Node.js streams | Async/await patterns | Non-blocking document processing |
+| **Caching** | In-memory + database | Custom strategies | Performance optimization |
+| **Connection Pooling** | pg (PostgreSQL driver) | ^8.11.3 | Database connection management |
+
+### 🧪 **Testing & Quality**
+| Testing Type | Technology | Version | Coverage |
+|--------------|------------|---------|----------|
+| **Unit Testing** | Jest | ^29.7.0 | Core functionality validation |
+| **Integration Testing** | Jest + Supertest | ^7.1.4 | API endpoint testing |
+| **Type Checking** | TypeScript | ^5.3.3 | Compile-time error prevention |
+| **Linting** | ESLint | ^8.55.0 | Code quality enforcement |
+| **Database Validation** | Custom scripts | Built-in | Embedding integrity checks |
+
+### 🔧 **Development & DevOps**
+| Tool | Technology | Version | Purpose |
+|------|------------|---------|---------|
+| **Package Manager** | npm | Latest | Dependency management |
+| **Environment Config** | dotenv | ^17.2.1 | Environment variable management |
+| **Build Tool** | Next.js built-in | ^14.0.4 | Optimized production builds |
+| **Code Formatting** | Prettier (via Next.js) | Built-in | Consistent code style |
+
+### 🔒 **Security & Validation**
+| Feature | Implementation | Technology | Purpose |
+|---------|----------------|------------|---------|
+| **Input Validation** | Custom validators | TypeScript + Runtime | Request parameter validation |
+| **File Type Validation** | MIME type checking | Built-in | Secure file uploads |
+| **SQL Injection Prevention** | Parameterized queries | pg driver | Database security |
+| **Error Handling** | Standardized patterns | Custom middleware | Graceful error management |
+| **Rate Limiting** | Application-level | Custom implementation | API protection |
+
+### 📊 **Analytics & Monitoring**
+| Feature | Technology | Implementation | Purpose |
+|---------|------------|----------------|---------|
+| **Vector Database Stats** | Custom analytics | PostgreSQL queries | Database performance insights |
+| **Search Performance** | Timing metrics | Built-in logging | Response time monitoring |
+| **Token Usage Tracking** | OpenAI API responses | Custom counters | Cost monitoring |
+| **Embedding Validation** | Custom scripts | Database integrity checks | Data quality assurance |
+
+### 🎒 **Backlog Technologies (Future)**
+| Technology | Purpose | Status | Integration Effort |
+|------------|---------|--------|-------------------|
+| **Advanced Reranking** | `lib/reranker.ts` | Code ready | Low - just integrate |
+| **Tabula-py Integration** | Enhanced PDF table extraction | Planned | Medium - requires Python |
+| **OCR Capabilities** | Scanned document processing | Planned | High - new infrastructure |
+| **Advanced Medical NLP** | Clinical text processing | Research | High - domain expertise |
+
+### 🔄 **Configuration Management**
+All technologies are centrally configured in `lib/config.ts`:
+
+```typescript
+// OpenAI Configuration
+embeddingModel: 'text-embedding-3-small'    // 1536 dimensions
+chatModel: 'gpt-4'                          // Primary chat model
+embeddingDimensions: 1536                   // Vector size
+maxBatchSize: 100                           // Batch processing limit
+
+// RAG Configuration  
+chunkSize: 1000                             // Text chunk size
+chunkOverlap: 200                           // Overlap for context
+similarityThreshold: 0.7                   // Default similarity
+maxSearchResults: 5                        // Default result limit
+maxFileSize: 10485760                      // 10MB file limit
+
+// Database Configuration
+PostgreSQL 16+ with pgvector extension     // Vector database
+HNSW indexing for fast similarity search   // Vector index algorithm
+```
+
+This comprehensive stack provides a production-ready, scalable RAG system with medical document intelligence capabilities.
 
 ## Architecture Overview
 - **Frontend**: Next.js 14-15 with React components

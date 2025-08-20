@@ -2,7 +2,7 @@ import { Pool, PoolClient } from 'pg';
 import { databaseConfig } from './config';
 
 // Database configuration from centralized config
-const pool = new Pool({
+const poolConfig = {
   user: databaseConfig.user,
   host: databaseConfig.host,
   database: databaseConfig.name,
@@ -11,8 +11,24 @@ const pool = new Pool({
   // Connection pool settings
   max: 20, // Maximum number of clients in pool
   idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-  connectionTimeoutMillis: 2000, // Return error after 2 seconds if connection could not be established
+  connectionTimeoutMillis: 10000, // Return error after 10 seconds if connection could not be established
+  // SSL configuration for production
+  ...(process.env.NODE_ENV === 'production' && {
+    ssl: {
+      rejectUnauthorized: false
+    }
+  })
+};
+
+console.log('Database config:', {
+  host: poolConfig.host,
+  port: poolConfig.port,
+  database: poolConfig.database,
+  user: poolConfig.user,
+  ssl: poolConfig.ssl ? 'enabled' : 'disabled'
 });
+
+const pool = new Pool(poolConfig);
 
 // Database connection singleton
 class Database {
