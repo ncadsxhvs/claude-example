@@ -22,6 +22,11 @@ interface RAGConfig {
   maxSearchResults: number;
   maxFileSize: number;
   supportedFileTypes: string[];
+  // Page-aware chunking options
+  pageAwareChunking: boolean;
+  maxChunkSizeForTables: number;
+  preservePageBoundaries: boolean;
+  tableDetectionEnabled: boolean;
 }
 
 interface AppConfig {
@@ -85,6 +90,11 @@ export const ragConfig: RAGConfig = {
   maxSearchResults: parseInt(validateEnvVar('RAG_MAX_SEARCH_RESULTS', '5')),
   maxFileSize: parseInt(validateEnvVar('RAG_MAX_FILE_SIZE', '10485760')), // 10MB
   supportedFileTypes: (validateEnvVar('RAG_SUPPORTED_FILE_TYPES', 'text/plain,text/markdown')).split(','),
+  // Page-aware chunking configuration
+  pageAwareChunking: validateEnvVar('RAG_PAGE_AWARE_CHUNKING', 'true') === 'true',
+  maxChunkSizeForTables: parseInt(validateEnvVar('RAG_MAX_CHUNK_SIZE_FOR_TABLES', '3000')),
+  preservePageBoundaries: validateEnvVar('RAG_PRESERVE_PAGE_BOUNDARIES', 'true') === 'true',
+  tableDetectionEnabled: validateEnvVar('RAG_TABLE_DETECTION_ENABLED', 'true') === 'true',
 };
 
 // Full app configuration

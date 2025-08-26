@@ -18,6 +18,7 @@ RETURNS TABLE (
   chunk_text TEXT,
   chunk_index INTEGER,
   page INTEGER,
+  metadata JSONB,
   similarity_score DECIMAL
 ) AS $$
 BEGIN
@@ -29,6 +30,7 @@ BEGIN
     c.text as chunk_text,
     c.chunk_index,
     c.page,
+    c.metadata,
     (1 - (c.embedding <=> query_embedding))::DECIMAL(5,4) as similarity_score
   FROM chunks c
   JOIN documents d ON c.document_id = d.id
@@ -58,6 +60,7 @@ RETURNS TABLE (
   chunk_text TEXT,
   chunk_index INTEGER,
   page INTEGER,
+  metadata JSONB,
   semantic_score DECIMAL,
   keyword_score DECIMAL,
   combined_score DECIMAL
@@ -72,6 +75,7 @@ BEGIN
       c.text as chunk_text,
       c.chunk_index,
       c.page,
+      c.metadata,
       (1 - (c.embedding <=> query_embedding))::DECIMAL(5,4) as semantic_score
     FROM chunks c
     JOIN documents d ON c.document_id = d.id
@@ -87,6 +91,7 @@ BEGIN
       c.text as chunk_text,
       c.chunk_index,
       c.page,
+      c.metadata,
       ts_rank(to_tsvector('english', c.text), plainto_tsquery('english', query_text))::DECIMAL(5,4) as keyword_score
     FROM chunks c
     JOIN documents d ON c.document_id = d.id
@@ -101,6 +106,7 @@ BEGIN
     COALESCE(s.chunk_text, k.chunk_text) as chunk_text,
     COALESCE(s.chunk_index, k.chunk_index) as chunk_index,
     COALESCE(s.page, k.page) as page,
+    COALESCE(s.metadata, k.metadata) as metadata,
     COALESCE(s.semantic_score, 0::DECIMAL(5,4)) as semantic_score,
     COALESCE(k.keyword_score, 0::DECIMAL(5,4)) as keyword_score,
     (COALESCE(s.semantic_score, 0) * semantic_weight + COALESCE(k.keyword_score, 0) * keyword_weight)::DECIMAL(5,4) as combined_score
@@ -125,6 +131,7 @@ RETURNS TABLE (
   chunk_text TEXT,
   chunk_index INTEGER,
   page INTEGER,
+  metadata JSONB,
   keyword_score DECIMAL
 ) AS $$
 BEGIN
@@ -136,6 +143,7 @@ BEGIN
     c.text as chunk_text,
     c.chunk_index,
     c.page,
+    c.metadata,
     ts_rank(to_tsvector('english', c.text), plainto_tsquery('english', query_text))::DECIMAL(5,4) as keyword_score
   FROM chunks c
   JOIN documents d ON c.document_id = d.id

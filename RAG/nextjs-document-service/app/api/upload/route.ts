@@ -8,9 +8,10 @@ import { generateEmbedding } from '../../../lib/embeddings';
 import { processPDF, ExtractedTable } from '../../../lib/pdf-processor';
 import { processJson, ExtractedJsonTable } from '../../../lib/json-processor';
 import { storeMedicalTables } from '../../../lib/medical-table-processor';
+import { pageAwareChunker } from '../../../lib/page-aware-chunker';
 
-// Extract text from supported file types
-async function extractTextFromFile(file: File): Promise<{ text: string; tables?: ExtractedTable[] }> {
+// Extract text from supported file types with page tracking
+async function extractTextFromFile(file: File): Promise<{ text: string; tables?: ExtractedTable[]; pageMap?: Map<number, { start: number; end: number; page: number }> }> {
   const fileExtension = file.name.toLowerCase().split('.').pop();
   
   if (fileExtension === 'pdf') {
@@ -22,34 +23,162 @@ async function extractTextFromFile(file: File): Promise<{ text: string; tables?:
       tables: pdfResult.tables
     };
   } else if (fileExtension === 'json') {
-    // Process JSON with table extraction
     const jsonContent = await file.text();
-    const jsonResult = processJson(jsonContent);
+    const parsedJson = JSON.parse(jsonContent);
     
-    // Convert ExtractedJsonTable to ExtractedTable format
+    // Check for page-structured JSON
+    if (parsedJson.pages && Array.isArray(parsedJson.pages)) {
+      return processPageBasedJson(parsedJson);
+    }
+    
+    // Fallback to regular JSON processing
+    const jsonResult = processJson(jsonContent);
     const tables: ExtractedTable[] = jsonResult.tables.map(jsonTable => ({
       data: jsonTable.data,
       headers: jsonTable.headers,
       rowCount: jsonTable.rowCount,
       colCount: jsonTable.colCount,
-      page: 1, // JSON doesn't have pages
+      page: 1,
       confidence: jsonTable.confidence
     }));
     
-    return {
-      text: jsonResult.text,
-      tables: tables
-    };
+    return { text: jsonResult.text, tables };
   } else {
-    // Handle text files
+    // Handle text files - try to detect page markers
     const text = await file.text();
-    return { text };
+    let pageMap: Map<number, { start: number; end: number; page: number }> | undefined;
+    
+    // Look for common page markers in text files
+    const pageMarkers = text.match(/(?:^|\n)(?:Page \d+|--- Page \d+ ---|# Page \d+|\f)/gm);
+    
+    if (pageMarkers && pageMarkers.length > 0) {
+      pageMap = new Map();
+      let currentPage = 1;
+      let currentPosition = 0;
+      
+      // Simple page detection for text files
+      const sections = text.split(/(?:^|\n)(?:Page \d+|--- Page \d+ ---|# Page \d+|\f)/m);
+      sections.forEach((section, index) => {
+        if (section.trim()) {
+          pageMap!.set(index, {
+            start: currentPosition,
+            end: currentPosition + section.length,
+            page: currentPage
+          });
+          currentPosition += section.length;
+          currentPage++;
+        }
+      });
+    }
+    
+    return { text, pageMap };
   }
 }
 
 // Generate content hash for duplicate detection
 function generateContentHash(content: string): string {
   return createHash('sha256').update(content).digest('hex');
+}
+
+// Process page-structured JSON (minimalist approach)
+function processPageBasedJson(parsedJson: any): { text: string; pageMap: Map<number, { start: number; end: number; page: number }> } {
+  const pages = parsedJson.pages.filter((page: any) => page.page);
+  const pageContents: string[] = [];
+  const pageMap = new Map<number, { start: number; end: number; page: number }>();
+  
+  let currentPos = 0;
+  
+  pages.forEach((page: any) => {
+    // Extract clean content: md > text > tables
+    const content = page.md || 
+                   (page.text && cleanText(page.text)) ||
+                   extractTables(page.items) ||
+                   '';
+    
+    if (content.trim()) {
+      const cleanContent = `# Page ${page.page}\n\n${content.trim()}`;
+      const startPos = currentPos;
+      const endPos = currentPos + cleanContent.length;
+      
+      pageContents.push(cleanContent);
+      pageMap.set(pages.indexOf(page), {
+        start: startPos,
+        end: endPos,
+        page: page.page
+      });
+      
+      currentPos = endPos + 2; // +2 for page separator
+    }
+  });
+  
+  return {
+    text: pageContents.join('\n\n---\n\n'),
+    pageMap
+  };
+}
+
+// Clean OCR text
+function cleanText(text: string): string {
+  return text
+    .replace(/\s+/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .trim();
+}
+
+// Extract tables from page items
+function extractTables(items?: any[]): string {
+  if (!items) return '';
+  
+  return items
+    .filter(item => item.type === 'table' && (item.csv || item.md))
+    .map(item => item.csv || item.md)
+    .join('\n\n');
+}
+
+// Helper function to find which page a chunk belongs to
+function findChunkPage(chunkText: string, fullText: string, pageMap?: Map<number, { start: number; end: number; page: number }>): number[] {
+  if (!pageMap || pageMap.size === 0) {
+    return []; // No page information available
+  }
+
+  const chunkStart = fullText.indexOf(chunkText);
+  const chunkEnd = chunkStart + chunkText.length;
+  const pages: number[] = [];
+
+  // Find all pages that this chunk spans
+  for (const pageInfo of Array.from(pageMap.values())) {
+    // Check if chunk overlaps with this page
+    if (chunkStart <= pageInfo.end && chunkEnd >= pageInfo.start) {
+      if (!pages.includes(pageInfo.page)) {
+        pages.push(pageInfo.page);
+      }
+    }
+  }
+
+  return pages.sort((a, b) => a - b); // Return sorted page numbers
+}
+
+// Simple content type detection
+function detectContentType(text: string): string {
+  const lowerText = text.toLowerCase();
+  
+  // Medical patterns
+  const medicalTerms = ['pharmacist', 'prescription', 'medication', 'therapy', 'clinical', 'patient', 'treatment'];
+  const medicalCount = medicalTerms.filter(term => lowerText.includes(term)).length;
+  
+  // Educational patterns  
+  const educationalTerms = ['module', 'lesson', 'learning objective', 'course', 'training'];
+  const educationalCount = educationalTerms.filter(term => lowerText.includes(term)).length;
+  
+  // Regulatory patterns
+  const regulatoryTerms = ['scope of practice', 'regulation', 'authority', 'province', 'jurisdiction'];
+  const regulatoryCount = regulatoryTerms.filter(term => lowerText.includes(term)).length;
+  
+  // Determine primary content type
+  if (regulatoryCount >= 2) return 'regulatory';
+  if (medicalCount >= 3) return 'medical';  
+  if (educationalCount >= 2) return 'educational';
+  return 'general';
 }
 
 // Check for duplicate files
@@ -135,11 +264,12 @@ export async function POST(request: NextRequest) {
     const processor = createDocumentProcessor(tempDocumentId, userId, file.name);
     processor.queued();
 
-    // Extract text content and tables
+    // Extract text content, tables, and page mapping
     processor.extractingText();
     const extractionResult = await extractTextFromFile(file);
     const extractedText = extractionResult.text;
     const extractedTables = extractionResult.tables || [];
+    const pageMap = extractionResult.pageMap;
 
     if (!extractedText.trim()) {
       processor.failed('File appears to be empty');
@@ -222,23 +352,25 @@ export async function POST(request: NextRequest) {
     const realProcessor = createDocumentProcessor(documentId, userId, file.name);
     realProcessor.chunking(extractedText.length);
 
-    // Step 2: Chunk the text (configuration-driven)
-    const textSplitter = new RecursiveCharacterTextSplitter({
-      chunkSize: ragConfig.chunkSize,
-      chunkOverlap: ragConfig.chunkOverlap,
-      separators: [
-        '\n## ',     // Section headers (medical/legal documents)
-        '\n# ',      // Main headers
-        '\n\n',      // Paragraph breaks
-        '\n',        // Line breaks
-        '. ',        // Sentence endings
-        ', ',        // Clause separators
-        ' ',         // Word boundaries
-        ''           // Character level (fallback)
-      ],
-    });
+    // Step 2: Chunk the text with page-aware and table-aware logic
+    console.log(`🔧 Using ${ragConfig.pageAwareChunking ? 'page-aware' : 'standard'} chunking for ${file.name}`);
     
-    const textChunks = await textSplitter.splitText(extractedText);
+    const chunkResults = await pageAwareChunker.chunkText(extractedText, pageMap);
+    const textChunks = chunkResults.map(result => result.content);
+    
+    console.log(`📄 Chunked into ${textChunks.length} chunks (avg size: ${Math.round(extractedText.length / textChunks.length)} chars)`);
+    
+    // Log page distribution for debugging
+    if (ragConfig.pageAwareChunking && pageMap) {
+      const pageStats = chunkResults.reduce((stats, result) => {
+        if (result.metadata.pageNumbers.length > 0) {
+          const pageKey = result.metadata.pageNumbers.join(',');
+          stats[pageKey] = (stats[pageKey] || 0) + 1;
+        }
+        return stats;
+      }, {} as Record<string, number>);
+      console.log('📊 Page distribution:', pageStats);
+    }
 
     if (textChunks.length === 0) {
       realProcessor.failed('No valid text chunks could be created');
@@ -256,17 +388,45 @@ export async function POST(request: NextRequest) {
       realProcessor.storingChunks(textChunks.length);
       
       const insertChunksQuery = `
-        INSERT INTO chunks (document_id, chunk_index, text, word_count, character_count, embedding, metadata)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO chunks (document_id, chunk_index, text, word_count, character_count, embedding, page, metadata)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       `;
 
       for (let i = 0; i < textChunks.length; i++) {
         const chunk = textChunks[i];
+        const chunkResult = chunkResults[i];
         const wordCount = chunk.split(/\s+/).filter(w => w.length > 0).length;
+        
+        // Use page-aware metadata if available, fallback to legacy method
+        const chunkPages = chunkResult.metadata.pageNumbers.length > 0 
+          ? chunkResult.metadata.pageNumbers 
+          : findChunkPage(chunk, extractedText, pageMap);
         
         // Generate embedding for this chunk
         const embeddingResult = await generateEmbedding(chunk);
         const embeddingVector = `[${embeddingResult.embedding.join(',')}]`;
+        
+        // Enhanced metadata with page-aware information
+        const chunkMetadata = {
+          createdAt: new Date().toISOString(),
+          embeddingGenerated: true,
+          tokensUsed: embeddingResult.usage.total_tokens,
+          // Content analysis
+          contentType: detectContentType(chunk),
+          hasTable: chunkResult.metadata.isTable || (chunk.includes('|') && chunk.includes('---')),
+          hasMedicalTerms: /\b(patient|medication|treatment|diagnosis|therapy|clinical|pharmacist|prescription)\b/i.test(chunk),
+          hasRegulatory: /\b(regulation|scope of practice|authority|province|jurisdiction|compliance)\b/i.test(chunk),
+          // Page-aware metadata
+          pages: chunkPages,
+          pageCount: chunkPages.length,
+          primaryPage: chunkPages.length > 0 ? chunkPages[0] : null,
+          spansMultiplePages: chunkPages.length > 1,
+          // New page-aware fields
+          isTableChunk: chunkResult.metadata.isTable || false,
+          pageAwareChunking: ragConfig.pageAwareChunking,
+          chunkingMethod: ragConfig.pageAwareChunking ? 'page-aware' : 'standard',
+          originalChunkSize: chunkResult.metadata.chunkSize
+        };
         
         await db.query(insertChunksQuery, [
           documentId,
@@ -275,11 +435,8 @@ export async function POST(request: NextRequest) {
           wordCount,
           chunk.length,
           embeddingVector,
-          JSON.stringify({
-            createdAt: new Date().toISOString(),
-            embeddingGenerated: true,
-            tokensUsed: embeddingResult.usage.total_tokens
-          })
+          chunkPages.length > 0 ? chunkPages[0] : null, // Legacy page column
+          JSON.stringify(chunkMetadata)
         ]);
 
         // Update progress every 10 chunks or on last chunk

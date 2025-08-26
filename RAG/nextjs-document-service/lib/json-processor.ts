@@ -52,8 +52,14 @@ export function processJson(jsonContent: string): JsonProcessingResult {
 
 /**
  * Generate human-readable text from JSON structure
+ * Prioritizes clean content for page-structured documents
  */
 function generateReadableText(obj: any, prefix: string = '', depth: number = 0): string {
+  // Special handling for page-structured JSON (like pg26.json)
+  if (depth === 0 && isPageStructuredJson(obj)) {
+    return generateCleanPageContent(obj);
+  }
+  
   if (depth > 10) return '[Max depth reached]'; // Prevent infinite recursion
   
   const lines: string[] = [];
@@ -280,4 +286,112 @@ function analyzeJsonStructure(obj: any): JsonProcessingResult['metadata'] {
     hasArrays,
     hasTables
   };
+}
+
+/**
+ * Detect if JSON has page-structured format (like pg26.json)
+ */
+function isPageStructuredJson(obj: any): boolean {
+  return obj && 
+         typeof obj === 'object' && 
+         Array.isArray(obj.pages) && 
+         obj.pages.length > 0 &&
+         obj.pages.some((page: any) => page.page && (page.md || page.text));
+}
+
+/**
+ * Generate clean content from page-structured JSON
+ * Prioritizes markdown over raw OCR text
+ */
+function generateCleanPageContent(obj: any): string {
+  if (!obj.pages || !Array.isArray(obj.pages)) {
+    return generateFallbackReadableText(obj, '', 0); // Fall back to default
+  }
+
+  const cleanPages = obj.pages
+    .filter((page: any) => page.md || page.text) // Only pages with content
+    .map((page: any) => {
+      const pageNumber = page.page || 'Unknown';
+      const content = page.md || page.text || '';
+      
+      // Clean up content
+      const cleanContent = cleanExtractedText(content);
+      
+      if (cleanContent.trim()) {
+        return `# Page ${pageNumber}\n\n${cleanContent}`;
+      }
+      return null;
+    })
+    .filter(Boolean) // Remove null entries
+    .join('\n\n---\n\n');
+
+  return cleanPages || generateFallbackReadableText(obj, '', 0); // Fall back if no clean content
+}
+
+/**
+ * Clean extracted text by removing JSON metadata and improving readability
+ */
+function cleanExtractedText(text: string): string {
+  return text
+    // Remove JSON metadata patterns
+    .replace(/pages: Array \(\d+ items\):/g, '')
+    .replace(/\[\d+\] [a-zA-Z]+:/g, '')
+    .replace(/Array \(\d+ items\):/g, '')
+    .replace(/^\s*\[\d+\]\s*/gm, '')
+    
+    // Remove OCR artifacts
+    .replace(/\s+\n/g, '\n') // Remove trailing spaces
+    .replace(/\n\s*\n\s*\n/g, '\n\n') // Normalize multiple line breaks
+    .replace(/([a-z])([A-Z])/g, '$1 $2') // Fix merged words
+    
+    // Clean up table formatting
+    .replace(/\s*\|\s*/g, ' | ') // Normalize table separators
+    .replace(/\n\s*\|\s*/g, '\n| ') // Fix table line starts
+    
+    // Remove empty lines at start/end
+    .trim();
+}
+
+/**
+ * Fallback readable text generation (original logic without page detection)
+ */
+function generateFallbackReadableText(obj: any, prefix: string = '', depth: number = 0): string {
+  if (depth > 10) return '[Max depth reached]'; // Prevent infinite recursion
+  
+  const lines: string[] = [];
+  const indent = '  '.repeat(depth);
+  
+  if (Array.isArray(obj)) {
+    if (obj.length === 0) {
+      lines.push(`${indent}${prefix}Empty array`);
+    } else if (isTableLikeArray(obj)) {
+      // Handle as table - show summary
+      lines.push(`${indent}${prefix}Table with ${obj.length} rows`);
+      if (obj[0] && typeof obj[0] === 'object') {
+        const headers = Object.keys(obj[0]);
+        lines.push(`${indent}  Columns: ${headers.join(', ')}`);
+      }
+    } else {
+      // Regular array
+      lines.push(`${indent}${prefix}Array (${obj.length} items):`);
+      obj.slice(0, 5).forEach((item, index) => {
+        lines.push(generateFallbackReadableText(item, `[${index}] `, depth + 1));
+      });
+      if (obj.length > 5) {
+        lines.push(`${indent}  ... and ${obj.length - 5} more items`);
+      }
+    }
+  } else if (typeof obj === 'object' && obj !== null) {
+    Object.entries(obj).forEach(([key, value]) => {
+      if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+        lines.push(`${indent}${prefix}${key}: ${value}`);
+      } else {
+        lines.push(generateFallbackReadableText(value, `${key}: `, depth + 1));
+      }
+    });
+  } else {
+    lines.push(`${indent}${prefix}${obj}`);
+  }
+  
+  return lines.join('\n');
 }

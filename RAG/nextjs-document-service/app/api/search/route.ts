@@ -103,7 +103,11 @@ async function performSemanticSearch(query: string, userId: string, maxResults: 
       chunk_text: r.chunk_text,
       chunk_index: r.chunk_index,
       similarity_score: r.similarity_score,
-      search_type: 'semantic'
+      search_type: 'semantic',
+      // Add page reference information from metadata
+      pages: r.metadata?.pages || [],
+      primary_page: r.metadata?.primaryPage || null,
+      spans_multiple_pages: r.metadata?.spansMultiplePages || false
     })),
     searchDetails: {
       embeddingDimensions: embeddingResult.embedding.length,
@@ -162,7 +166,11 @@ async function performKeywordSearch(query: string, userId: string, maxResults: n
       chunk_text: r.chunk_text,
       chunk_index: r.chunk_index,
       similarity_score: r.keyword_score,
-      search_type: 'keyword'
+      search_type: 'keyword',
+      // Add page reference information from metadata
+      pages: r.metadata?.pages || [],
+      primary_page: r.metadata?.primaryPage || null,
+      spans_multiple_pages: r.metadata?.spansMultiplePages || false
     })),
     searchDetails: {
       keywords,
